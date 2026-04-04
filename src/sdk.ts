@@ -30,6 +30,19 @@ export interface SDKOptions {
   };
 }
 
+// Configuration for batch server connections
+export interface MCPConnectionConfig {
+  servers: Array<{
+    name?: string;
+    transport: {
+      type: 'stdio' | 'http' | 'sse';
+      command?: string;
+      args?: string[];
+      url?: string;
+    };
+  }>;
+}
+
 export interface ServiceStatus {
   name: string;
   status: 'running' | 'stopped' | 'error' | 'unknown';
@@ -560,6 +573,90 @@ export class MCPilotSDK {
       this.logger.error(`Failed to disconnect from MCP server '${name}': ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Connect multiple MCP servers from configuration
+   */
+  async connectAllFromConfig(config: MCPConnectionConfig): Promise<Array<{ name: string; success: boolean; toolsCount?: number; error?: string }>> {
+    this.ensureInitialized();
+
+    const results = [];
+    
+    for (const serverConfig of config.servers) {
+      try {
+        const name = serverConfig.name || `server-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Convert to MCPClientConfig format
+        const mcpConfig: MCPClientConfig = {
+          transport: serverConfig.transport
+        };
+        
+        const client = await this.connectMCPServer(mcpConfig, name);
+        const tools = await client.listTools();
+        
+        results.push({
+          name,
+          success: true,
+          toolsCount: tools.length
+        });
+        
+        this.logger.info(`Successfully connected to server "${name}" with ${tools.length} tools`);
+      } catch (error: any) {
+        const serverName = serverConfig.name || 'unnamed-server';
+        results.push({
+          name: serverName,
+          success: false,
+          error: error.message
+        });
+        
+        this.logger.error(`Failed to connect to server "${serverName}": ${error.message}`);
+      }
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    const totalCount = results.length;
+    
+    this.logger.info(`Batch connection completed: ${successCount}/${totalCount} servers connected successfully`);
+    
+    return results;
+  }
+
+  /**
+   * Disconnect all MCP servers
+   */
+  async disconnectAll(): Promise<Array<{ name: string; success: boolean; error?: string }>> {
+    this.ensureInitialized();
+
+    const results = [];
+    const serverNames = Array.from(this.mcpClients.keys());
+    
+    for (const name of serverNames) {
+      try {
+        await this.disconnectMCPServer(name);
+        results.push({
+          name,
+          success: true
+        });
+        
+        this.logger.info(`Successfully disconnected from server "${name}"`);
+      } catch (error: any) {
+        results.push({
+          name,
+          success: false,
+          error: error.message
+        });
+        
+        this.logger.error(`Failed to disconnect from server "${name}": ${error.message}`);
+      }
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    const totalCount = results.length;
+    
+    this.logger.info(`Batch disconnection completed: ${successCount}/${totalCount} servers disconnected successfully`);
+    
+    return results;
   }
 
   /**

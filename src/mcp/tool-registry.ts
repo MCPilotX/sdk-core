@@ -138,10 +138,52 @@ export class ToolRegistry {
     const registeredTool = this.tools.get(toolCall.name);
     
     if (!registeredTool) {
+      // Get list of connected servers and available tools for better error messages
+      const connectedServers = this.getConnectedServers();
+      const availableTools = this.getAllTools();
+      
+      let errorMessage = `Tool "${toolCall.name}" not found.`;
+      
+      // Add helpful suggestions
+      if (connectedServers.length > 0) {
+        errorMessage += `\n\nConnected servers: ${connectedServers.join(', ')}`;
+        
+        // Suggest similar tool names
+        const similarTools = availableTools
+          .filter(tool => tool.tool.name.toLowerCase().includes(toolCall.name.toLowerCase()) ||
+                         toolCall.name.toLowerCase().includes(tool.tool.name.toLowerCase()))
+          .slice(0, 3);
+        
+        if (similarTools.length > 0) {
+          errorMessage += `\n\nDid you mean one of these tools?`;
+          similarTools.forEach(tool => {
+            errorMessage += `\n  - ${tool.tool.name} (from server: ${tool.metadata.serverName})`;
+          });
+        }
+        
+        // List all available tools if there aren't too many
+        if (availableTools.length <= 10) {
+          errorMessage += `\n\nAvailable tools:`;
+          availableTools.forEach(tool => {
+            errorMessage += `\n  - ${tool.tool.name} (${tool.metadata.serverName})`;
+          });
+        } else {
+          errorMessage += `\n\nThere are ${availableTools.length} tools available from ${connectedServers.length} servers.`;
+          errorMessage += `\nUse listTools() or searchTools() to find the right tool.`;
+        }
+      } else {
+        errorMessage += `\n\nNo MCP servers are currently connected.`;
+        errorMessage += `\nConnect a server first using connectMCPServer() or connectAllFromConfig().`;
+        errorMessage += `\n\nPopular MCP servers you can connect:`;
+        errorMessage += `\n  - @modelcontextprotocol/server-filesystem (file operations)`;
+        errorMessage += `\n  - @modelcontextprotocol/server-weather (weather data)`;
+        errorMessage += `\n  - @modelcontextprotocol/server-github (GitHub operations)`;
+      }
+      
       return {
         content: [{
           type: 'text',
-          text: `Tool "${toolCall.name}" not found`,
+          text: errorMessage,
         }],
         isError: true,
       };
@@ -193,6 +235,22 @@ export class ToolRegistry {
 
   getServerIds(): string[] {
     return Array.from(this.serverTools.keys());
+  }
+
+  /**
+   * Get connected servers with their names
+   */
+  getConnectedServers(): string[] {
+    const servers: string[] = [];
+    
+    for (const registeredTool of this.tools.values()) {
+      const serverName = registeredTool.metadata.serverName || registeredTool.metadata.serverId;
+      if (!servers.includes(serverName)) {
+        servers.push(serverName);
+      }
+    }
+    
+    return servers;
   }
 
   searchTools(query: string): RegisteredTool[] {

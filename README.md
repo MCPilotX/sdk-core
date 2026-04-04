@@ -44,6 +44,118 @@
 - **📊 Monitoring**: Real-time service status and tool usage statistics
 - **🔧 Extensible Architecture**: Clean separation of concerns with pluggable adapters
 
+## 🤔 Why MCPilot?
+
+MCPilot SDK dramatically simplifies working with multiple MCP servers. Here's a comparison:
+
+### ❌ Without MCPilot SDK (Manual Management)
+
+```typescript
+// Manually managing multiple MCP servers is complex and error-prone
+import { MCPClient } from '@modelcontextprotocol/sdk/client';
+
+const servers = [];
+
+// Connect to filesystem server
+const fsClient = new MCPClient({
+  transport: {
+    type: 'stdio',
+    command: 'npx',
+    args: ['@modelcontextprotocol/server-filesystem']
+  }
+});
+await fsClient.connect();
+servers.push({ name: 'filesystem', client: fsClient });
+
+// Connect to weather server  
+const weatherClient = new MCPClient({
+  transport: {
+    type: 'stdio',
+    command: 'npx',
+    args: ['@modelcontextprotocol/server-weather']
+  }
+});
+await weatherClient.connect();
+servers.push({ name: 'weather', client: weatherClient });
+
+// Manual tool discovery across all servers
+const allTools = [];
+for (const server of servers) {
+  const tools = await server.client.listTools();
+  allTools.push(...tools.map(tool => ({
+    ...tool,
+    server: server.name
+  })));
+}
+
+// Manual tool execution with error handling
+async function executeTool(toolName: string, args: any) {
+  for (const server of servers) {
+    const tools = await server.client.listTools();
+    const tool = tools.find(t => t.name === toolName);
+    if (tool) {
+      return await server.client.callTool(toolName, args);
+    }
+  }
+  throw new Error(`Tool "${toolName}" not found in any connected server`);
+}
+
+// Don't forget to clean up!
+for (const server of servers) {
+  await server.client.disconnect();
+}
+```
+
+### ✅ With MCPilot SDK (Simplified Management)
+
+```typescript
+import { mcpilot } from '@mcpilotx/sdk-core';
+
+// One-line initialization
+await mcpilot.initMCP();
+
+// Connect multiple servers with a single configuration
+await mcpilot.connectAllFromConfig({
+  servers: [
+    {
+      name: 'filesystem',
+      transport: {
+        type: 'stdio',
+        command: 'npx',
+        args: ['@modelcontextprotocol/server-filesystem']
+      }
+    },
+    {
+      name: 'weather',
+      transport: {
+        type: 'stdio',
+        command: 'npx',
+        args: ['@modelcontextprotocol/server-weather']
+      }
+    }
+  ]
+});
+
+// Unified tool discovery
+const tools = mcpilot.listTools(); // All tools from all servers
+
+// Unified tool execution (SDK finds the right server)
+const result = await mcpilot.executeTool('read_file', {
+  path: '/tmp/example.txt'
+});
+
+// Automatic cleanup when done
+await mcpilot.disconnectAll();
+```
+
+### Key Benefits:
+- **🚀 80% less boilerplate code** - Focus on your application logic
+- **🔧 Unified API** - Single interface for all MCP operations
+- **⚡ Automatic tool discovery** - Tools from all servers in one registry
+- **🛡️ Built-in error handling** - Consistent error messages and recovery
+- **📊 Centralized monitoring** - Track tool usage and server health
+- **🔌 Easy extensibility** - Add new servers without changing application code
+
 ## 📦 Installation
 
 ```bash
