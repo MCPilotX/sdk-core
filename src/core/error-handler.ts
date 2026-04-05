@@ -13,54 +13,54 @@ export enum ErrorCode {
   CONFIG_MISSING = 'CONFIG_002',
   CONFIG_VALIDATION_FAILED = 'CONFIG_003',
   CONFIG_MIGRATION_FAILED = 'CONFIG_004',
-  
+
   // ==================== Service Errors (2xx) ====================
   SERVICE_NOT_FOUND = 'SERVICE_001',
   SERVICE_ALREADY_EXISTS = 'SERVICE_002',
   SERVICE_START_FAILED = 'SERVICE_003',
   SERVICE_STOP_FAILED = 'SERVICE_004',
   SERVICE_HEALTH_CHECK_FAILED = 'SERVICE_005',
-  
+
   // ==================== Runtime Errors (3xx) ====================
   RUNTIME_DETECTION_FAILED = 'RUNTIME_001',
   RUNTIME_NOT_SUPPORTED = 'RUNTIME_002',
   RUNTIME_NOT_INSTALLED = 'RUNTIME_003',
   RUNTIME_ADAPTER_ERROR = 'RUNTIME_004',
-  
+
   // ==================== Process Errors (4xx) ====================
   PROCESS_NOT_FOUND = 'PROCESS_001',
   PROCESS_START_FAILED = 'PROCESS_002',
   PROCESS_STOP_FAILED = 'PROCESS_003',
   PROCESS_TIMEOUT = 'PROCESS_004',
-  
+
   // ==================== Resource Errors (5xx) ====================
   RESOURCE_LIMIT_EXCEEDED = 'RESOURCE_001',
   MEMORY_LIMIT_EXCEEDED = 'RESOURCE_002',
   CPU_LIMIT_EXCEEDED = 'RESOURCE_003',
   DISK_SPACE_INSUFFICIENT = 'RESOURCE_004',
-  
+
   // ==================== Permission Errors (6xx) ====================
   PERMISSION_DENIED = 'PERMISSION_001',
   FILE_PERMISSION_ERROR = 'PERMISSION_002',
   NETWORK_PERMISSION_ERROR = 'PERMISSION_003',
-  
+
   // ==================== Network Errors (7xx) ====================
   NETWORK_ERROR = 'NETWORK_001',
   CONNECTION_REFUSED = 'NETWORK_002',
   CONNECTION_TIMEOUT = 'NETWORK_003',
   DNS_RESOLUTION_FAILED = 'NETWORK_004',
-  
+
   // ==================== AI Errors (8xx) ====================
   AI_CONFIG_INVALID = 'AI_001',
   AI_PROVIDER_NOT_AVAILABLE = 'AI_002',
   AI_QUERY_FAILED = 'AI_003',
   AI_MODEL_NOT_FOUND = 'AI_004',
-  
+
   // ==================== System Errors (9xx) ====================
   SYSTEM_ERROR = 'SYSTEM_001',
   UNEXPECTED_ERROR = 'SYSTEM_002',
   NOT_IMPLEMENTED = 'SYSTEM_003',
-  
+
   // ==================== Validation Errors (10xx) ====================
   VALIDATION_FAILED = 'VALIDATION_001',
   REQUIRED_FIELD_MISSING = 'VALIDATION_002',
@@ -113,22 +113,22 @@ export class MCPilotError extends Error {
     public severity: ErrorSeverity = ErrorSeverity.MEDIUM,
     public context: ErrorContext = {},
     public suggestions: ErrorSuggestion[] = [],
-    public override cause?: Error
+    public override cause?: Error,
   ) {
     super(message);
     this.name = 'MCPilotError';
-    
+
     // Ensure stack trace includes original error
     if (cause && cause.stack) {
       this.stack = `${this.stack}\nCaused by: ${cause.stack}`;
     }
-    
+
     // Automatically add timestamp
     if (!context.timestamp) {
       context.timestamp = new Date();
     }
   }
-  
+
   /**
    * Convert to JSON format for easy logging and transmission
    */
@@ -148,14 +148,14 @@ export class MCPilotError extends Error {
       }) : undefined,
     };
   }
-  
+
   /**
    * Get error summary for display
    */
   getSummary(): string {
     return `[${this.code}] ${this.message}`;
   }
-  
+
   /**
    * Get detailed error information
    */
@@ -166,22 +166,22 @@ export class MCPilotError extends Error {
       `Message: ${this.message}`,
       `Severity: ${this.severity}`,
     ];
-    
+
     if (Object.keys(this.context).length > 0) {
       details.push(`Context: ${JSON.stringify(this.context, null, 2)}`);
     }
-    
+
     if (this.suggestions.length > 0) {
-      details.push(`Suggestions:`);
+      details.push('Suggestions:');
       this.suggestions.forEach((suggestion, index) => {
         details.push(`  ${index + 1}. ${suggestion.title}: ${suggestion.description}`);
       });
     }
-    
+
     if (this.stack) {
       details.push(`Stack: ${this.stack}`);
     }
-    
+
     return details.join('\n');
   }
 }
@@ -212,10 +212,10 @@ export class ErrorFactory {
           documentationUrl: 'https://github.com/MCPilotX/mcpilot/docs/configuration',
         },
       ],
-      cause
+      cause,
     );
   }
-  
+
   /**
    * Service not found error
    */
@@ -230,16 +230,16 @@ export class ErrorFactory {
           title: 'Check service name',
           description: 'Please confirm if the service name is correct',
           steps: [
-            `Use 'mcp ls' command to view all services`,
-            `Confirm service name spelling is correct`,
-            `Check if service has been deleted`,
-            `If needed, re-add service: mcp add <path>`,
+            'Use \'mcp ls\' command to view all services',
+            'Confirm service name spelling is correct',
+            'Check if service has been deleted',
+            'If needed, re-add service: mcp add <path>',
           ],
         },
-      ]
+      ],
     );
   }
-  
+
   /**
    * Runtime detection failed error
    */
@@ -254,18 +254,18 @@ export class ErrorFactory {
           title: 'Manually specify runtime type',
           description: 'Auto-detection failed, please manually specify runtime type',
           steps: [
-            `Use --type parameter to specify runtime: mcp add <path> --type <runtime>`,
-            `Supported runtime types: node, python, docker, go, rust, binary`,
-            `Check if project directory contains correct configuration files`,
-            `Confirm project structure meets expectations`,
+            'Use --type parameter to specify runtime: mcp add <path> --type <runtime>',
+            'Supported runtime types: node, python, docker, go, rust, binary',
+            'Check if project directory contains correct configuration files',
+            'Confirm project structure meets expectations',
           ],
           codeExample: 'mcp add ./my-service --type node',
         },
       ],
-      cause
+      cause,
     );
   }
-  
+
   /**
    * Process start failed error
    */
@@ -280,18 +280,18 @@ export class ErrorFactory {
           title: 'Check service configuration',
           description: 'Service startup failed, please check configuration and dependencies',
           steps: [
-            `Check if service path is correct`,
-            `Confirm runtime environment is installed`,
+            'Check if service path is correct',
+            'Confirm runtime environment is installed',
             `View service logs: mcp logs ${serviceName}`,
-            `Check if port is occupied`,
-            `Verify dependencies are installed`,
+            'Check if port is occupied',
+            'Verify dependencies are installed',
           ],
         },
       ],
-      cause
+      cause,
     );
   }
-  
+
   /**
    * Permission denied error
    */
@@ -307,15 +307,15 @@ export class ErrorFactory {
           description: 'Insufficient permissions to perform operation',
           steps: [
             `Check file/directory permissions: ls -la ${resource}`,
-            `Use sudo to run command (if applicable)`,
+            'Use sudo to run command (if applicable)',
             `Modify file permissions: chmod +x ${resource}`,
             `Change file owner: chown $(whoami) ${resource}`,
           ],
         },
-      ]
+      ],
     );
   }
-  
+
   /**
    * Network error
    */
@@ -330,18 +330,18 @@ export class ErrorFactory {
           title: 'Check network connection',
           description: 'Network connection failed, please check network settings',
           steps: [
-            `Check if network connection is normal`,
-            `Verify URL is correct`,
-            `Check firewall settings`,
-            `Try using proxy (if configured)`,
-            `Wait and retry after some time`,
+            'Check if network connection is normal',
+            'Verify URL is correct',
+            'Check firewall settings',
+            'Try using proxy (if configured)',
+            'Wait and retry after some time',
           ],
         },
       ],
-      cause
+      cause,
     );
   }
-  
+
   /**
    * Not implemented error
    */
@@ -356,17 +356,17 @@ export class ErrorFactory {
           title: 'Feature under development',
           description: 'This feature is under development and will be available in future versions',
           steps: [
-            `View project roadmap`,
-            `Follow GitHub release page`,
-            `Consider using alternative solutions`,
-            `Submit feature request (if urgently needed)`,
+            'View project roadmap',
+            'Follow GitHub release page',
+            'Consider using alternative solutions',
+            'Submit feature request (if urgently needed)',
           ],
           documentationUrl: 'https://github.com/MCPilotX/mcpilot/issues',
         },
-      ]
+      ],
     );
   }
-  
+
   /**
    * Validation error
    */
@@ -383,11 +383,11 @@ export class ErrorFactory {
           steps: [
             `Check value of ${field} field`,
             `Ensure value meets requirements: ${reason}`,
-            `Refer to field description in documentation`,
-            `Use valid example values`,
+            'Refer to field description in documentation',
+            'Use valid example values',
           ],
         },
-      ]
+      ],
     );
   }
 }
@@ -398,59 +398,59 @@ export class ErrorFactory {
 export class ErrorHandler {
   private static instance: ErrorHandler;
   private handlers: Array<(error: MCPilotError) => Promise<void>> = [];
-  
+
   private constructor() {}
-  
+
   static getInstance(): ErrorHandler {
     if (!ErrorHandler.instance) {
       ErrorHandler.instance = new ErrorHandler();
     }
     return ErrorHandler.instance;
   }
-  
+
   /**
    * Register error handler
    */
   registerHandler(handler: (error: MCPilotError) => Promise<void>): void {
     this.handlers.push(handler);
   }
-  
+
   /**
    * Handle error
    */
   async handle(error: Error | MCPilotError): Promise<void> {
     // Convert to MCPilotError (if not already)
-    const mcError = error instanceof MCPilotError 
-      ? error 
+    const mcError = error instanceof MCPilotError
+      ? error
       : new MCPilotError(
-          ErrorCode.UNEXPECTED_ERROR,
-          error.message,
-          ErrorSeverity.HIGH,
-          {},
-          [],
-          error
-        );
-    
+        ErrorCode.UNEXPECTED_ERROR,
+        error.message,
+        ErrorSeverity.HIGH,
+        {},
+        [],
+        error,
+      );
+
     // Log error
     console.error(`[MCPilot Error] ${mcError.getSummary()}`);
-    
+
     // Execute all registered handlers
     for (const handler of this.handlers) {
       try {
         await handler(mcError);
       } catch (handlerError) {
-        console.error(`Error handler failed:`, handlerError);
+        console.error('Error handler failed:', handlerError);
       }
     }
   }
-  
+
   /**
    * Safely execute function, automatically handle errors
    */
   async execute<T>(
     operation: string,
     fn: () => Promise<T>,
-    context: ErrorContext = {}
+    context: ErrorContext = {},
   ): Promise<T> {
     try {
       return await fn();
@@ -458,14 +458,14 @@ export class ErrorHandler {
       const mcError = error instanceof MCPilotError
         ? error
         : new MCPilotError(
-            ErrorCode.UNEXPECTED_ERROR,
-            `Operation '${operation}' failed: ${error instanceof Error ? error.message : String(error)}`,
-            ErrorSeverity.HIGH,
-            { ...context, operation },
-            [],
-            error instanceof Error ? error : undefined
-          );
-      
+          ErrorCode.UNEXPECTED_ERROR,
+          `Operation '${operation}' failed: ${error instanceof Error ? error.message : String(error)}`,
+          ErrorSeverity.HIGH,
+          { ...context, operation },
+          [],
+          error instanceof Error ? error : undefined,
+        );
+
       await this.handle(mcError);
       throw mcError;
     }
@@ -483,35 +483,35 @@ export class ConsoleErrorHandler {
       high: '\x1b[31m',    // red
       critical: '\x1b[41m\x1b[37m', // red background, white text
     };
-    
+
     const color = colors[error.severity] || '\x1b[0m';
     const reset = '\x1b[0m';
-    
+
     console.error(`\n${color}╔══════════════════════════════════════════════════════════════╗${reset}`);
     console.error(`${color}║ MCPilot Error: ${error.getSummary().padEnd(50)} ║${reset}`);
     console.error(`${color}╚══════════════════════════════════════════════════════════════╝${reset}`);
-    
+
     console.error(`\n${color}Details:${reset}`);
     console.error(error.getDetails());
-    
+
     if (error.suggestions.length > 0) {
       console.error(`\n${color}Suggestions:${reset}`);
       error.suggestions.forEach((suggestion, index) => {
         console.error(`  ${index + 1}. ${suggestion.title}`);
         console.error(`     ${suggestion.description}`);
         if (suggestion.steps.length > 0) {
-          console.error(`     Steps:`);
+          console.error('     Steps:');
           suggestion.steps.forEach(step => {
             console.error(`       • ${step}`);
           });
         }
       });
     }
-    
+
     console.error(`\n${color}Need more help?${reset}`);
-    console.error(`  • Check documentation: https://github.com/MCPilotX/mcpilot/docs`);
-    console.error(`  • Report issue: https://github.com/MCPilotX/mcpilot/issues`);
-    console.error(`  • Ask community: https://github.com/MCPilotX/mcpilot/discussions\n`);
+    console.error('  • Check documentation: https://github.com/MCPilotX/mcpilot/docs');
+    console.error('  • Report issue: https://github.com/MCPilotX/mcpilot/issues');
+    console.error('  • Ask community: https://github.com/MCPilotX/mcpilot/discussions\n');
   }
 }
 
@@ -538,21 +538,21 @@ export class RetryErrorHandler {
       baseDelay: 1000,
       maxDelay: 10000,
     },
-    context: ErrorContext = {}
+    context: ErrorContext = {},
   ): Promise<T> {
     let lastError: Error | undefined;
-    
+
     for (let attempt = 1; attempt <= strategy.maxAttempts; attempt++) {
       try {
         return await fn();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         // If this is the last attempt, throw error directly
         if (attempt === strategy.maxAttempts) {
           throw error;
         }
-        
+
         // Calculate delay time
         let delay = strategy.baseDelay;
         if (strategy.backoff === 'exponential') {
@@ -560,19 +560,19 @@ export class RetryErrorHandler {
         } else if (strategy.backoff === 'linear') {
           delay = strategy.baseDelay * attempt;
         }
-        
+
         // Apply maximum delay limit
         if (strategy.maxDelay && delay > strategy.maxDelay) {
           delay = strategy.maxDelay;
         }
-        
+
         console.warn(`[Retry] Attempt ${attempt}/${strategy.maxAttempts} failed for '${operation}'. Retrying in ${delay}ms...`);
-        
+
         // Wait for delay
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     // Theoretically won't reach here because error will be thrown in loop
     throw lastError || new Error(`Operation '${operation}' failed after ${strategy.maxAttempts} attempts`);
   }
@@ -599,7 +599,7 @@ export function shouldRetry(error: Error): boolean {
   if (!isMCPilotError(error)) {
     return false;
   }
-  
+
   // These error types can usually be resolved by retrying
   const retryableCodes = [
     ErrorCode.NETWORK_ERROR,
@@ -608,6 +608,6 @@ export function shouldRetry(error: Error): boolean {
     ErrorCode.PROCESS_START_FAILED,
     ErrorCode.SERVICE_START_FAILED,
   ];
-  
+
   return retryableCodes.includes(error.code);
 }

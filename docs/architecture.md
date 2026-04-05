@@ -1,48 +1,48 @@
-# 架构指南
+# Architecture Guide
 
-## 概述
+## Overview
 
-MCPilot SDK Core 是一个为开发者设计的 MCP（Model Context Protocol）服务编排 SDK。本文档详细介绍了 SDK 的架构设计、核心组件和设计原则。
+MCPilot SDK Core is an MCP (Model Context Protocol) service orchestration SDK designed for developers. This document details the SDK's architecture design, core components, and design principles.
 
-## 架构概览
+## Architecture Overview
 
-### 整体架构
+### Overall Architecture
 
 ```
 MCPilot SDK Core
-├── 核心层 (Core Layer)
-│   ├── SDK 主类 (MCPilotSDK)
-│   ├── 配置管理器 (ConfigManager)
-│   ├── 日志系统 (Logger)
-│   └── 错误处理 (ErrorHandler)
+├── Core Layer
+│   ├── SDK Main Class (MCPilotSDK)
+│   ├── Configuration Manager (ConfigManager)
+│   ├── Logging System (Logger)
+│   └── Error Handling (ErrorHandler)
 │
-├── MCP 模块 (MCP Module)
-│   ├── MCP 客户端 (MCPClient)
-│   ├── 工具注册表 (ToolRegistry)
-│   ├── 传输层 (Transport)
-│   └── 类型定义 (Types)
+├── MCP Module
+│   ├── MCP Client (MCPClient)
+│   ├── Tool Registry (ToolRegistry)
+│   ├── Transport Layer (Transport)
+│   └── Type Definitions (Types)
 │
-├── 运行时适配器 (Runtime Adapters)
-│   ├── Node.js 适配器
-│   ├── Python 适配器
-│   ├── Docker 适配器
-│   ├── Go 适配器
-│   └── Rust 适配器
+├── Runtime Adapters
+│   ├── Node.js Adapter
+│   ├── Python Adapter
+│   ├── Docker Adapter
+│   ├── Go Adapter
+│   └── Rust Adapter
 │
-├── 服务管理器 (Service Manager)
-│   ├── 服务生命周期管理
-│   ├── 健康监控
-│   └── 进程管理
+├── Service Manager
+│   ├── Service Lifecycle Management
+│   ├── Health Monitoring
+│   └── Process Management
 │
-├── AI 集成层 (AI Integration)
-│   ├── 自然语言处理
-│   ├── 工具执行编排
-│   └── 意图识别
+├── AI Integration Layer
+│   ├── Natural Language Processing
+│   ├── Tool Execution Orchestration
+│   └── Intent Recognition
 │
-└── 守护进程层 (Daemon Layer)
-    ├── 意图引擎 (Intent Engine)
-    ├── 编排器 (Orchestrator)
-    └── 进程管理器 (Process Manager)
+└── Daemon Layer
+    ├── Intent Engine
+    ├── Orchestrator
+    └── Process Manager
 ```
 
 ## 核心组件

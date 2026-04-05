@@ -37,13 +37,13 @@ export class DaemonServer {
             return c.json({ status: 'ok', message: 'pong' });
 
           case 'status':
-            return c.json({ 
-              status: 'ok', 
-              data: { 
+            return c.json({
+              status: 'ok',
+              data: {
                 uptime: process.uptime(),
                 pid: process.pid,
-                services: pm.getStatuses() 
-              } 
+                services: pm.getStatuses(),
+              },
             });
 
           case 'start-service':
@@ -109,7 +109,7 @@ export class DaemonServer {
 
     this.server = serve({
       fetch: this.app.fetch,
-      port: PORT
+      port: PORT,
     });
 
     logger.info('Daemon is now running.');
@@ -120,17 +120,17 @@ export class DaemonServer {
     try {
       const config = orchestrator.getConfig();
       const aiConfig = config.ai;
-      
+
       if (!aiConfig || !aiConfig.provider) {
         return {
           success: false,
           error: 'AI configuration not set. Use "mcp ai use <provider>" to configure AI.',
-          data: null
+          data: null,
         };
       }
-      
+
       logger.info(`[AI] Testing connection to provider: ${aiConfig.provider}`);
-      
+
       // Test based on different providers
       switch (aiConfig.provider) {
         case 'openai':
@@ -142,26 +142,26 @@ export class DaemonServer {
             return {
               success: false,
               error: `Missing API key for ${aiConfig.provider}. Get an API key from the provider's website and use "mcp cfg set ai.apiKey=your-api-key" to set it.`,
-              data: { 
+              data: {
                 provider: aiConfig.provider,
                 suggestion: `Get API key from: ${
                   aiConfig.provider === 'deepseek' ? 'https://platform.deepseek.com/api_keys' :
-                  aiConfig.provider === 'openai' ? 'https://platform.openai.com/api-keys' :
-                  aiConfig.provider === 'anthropic' ? 'https://console.anthropic.com/account/keys' :
-                  'https://dashboard.cohere.com/api-keys'
-                }`
-              }
+                    aiConfig.provider === 'openai' ? 'https://platform.openai.com/api-keys' :
+                      aiConfig.provider === 'anthropic' ? 'https://console.anthropic.com/account/keys' :
+                        'https://dashboard.cohere.com/api-keys'
+                }`,
+              },
             };
           }
-          
+
           // Direct API test for cloud providers
           try {
             const testResult = await DaemonServer.testCloudProvider(
               aiConfig.provider,
               aiConfig.apiKey,
-              aiConfig.model || this.getDefaultModel(aiConfig.provider)
+              aiConfig.model || this.getDefaultModel(aiConfig.provider),
             );
-            
+
             if (testResult.success) {
               return {
                 success: true,
@@ -169,27 +169,27 @@ export class DaemonServer {
                   provider: aiConfig.provider,
                   model: aiConfig.model,
                   status: 'connected',
-                  testResult: 'API connection successful'
-                }
+                  testResult: 'API connection successful',
+                },
               };
             } else {
               return {
                 success: false,
                 error: `API connection failed: ${testResult.error}`,
-                data: { 
+                data: {
                   provider: aiConfig.provider,
-                  details: testResult.data
-                }
+                  details: testResult.data,
+                },
               };
             }
           } catch (error: any) {
             return {
               success: false,
               error: `Connection test failed: ${error.message}`,
-              data: { provider: aiConfig.provider }
+              data: { provider: aiConfig.provider },
             };
           }
-          
+
         case 'ollama':
           // Check if Ollama service is available
           const host = aiConfig.ollamaHost || 'http://localhost:11434';
@@ -197,14 +197,14 @@ export class DaemonServer {
             // Use AbortController for timeout
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
+
             const response = await fetch(`${host}/api/tags`, {
               method: 'GET',
-              signal: controller.signal
+              signal: controller.signal,
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (response.ok) {
               const data = await response.json() as any;
               return {
@@ -213,24 +213,24 @@ export class DaemonServer {
                   provider: aiConfig.provider,
                   host: host,
                   status: 'connected',
-                  models: (data as any).models || []
-                }
+                  models: (data as any).models || [],
+                },
               };
             } else {
               return {
                 success: false,
                 error: `Ollama service response error: ${response.status}`,
-                data: { host: host }
+                data: { host: host },
               };
             }
           } catch (error: any) {
             return {
               success: false,
               error: `Cannot connect to Ollama service: ${error.message}`,
-              data: { host: host }
+              data: { host: host },
             };
           }
-          
+
         case 'local':
         case 'custom':
           // For local and custom providers, try to connect
@@ -239,14 +239,14 @@ export class DaemonServer {
             // Use AbortController for timeout
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
+
             const response = await fetch(endpoint, {
               method: 'GET',
-              signal: controller.signal
+              signal: controller.signal,
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (response.ok || response.status === 404 || response.status === 405) {
               // 404/405 may indicate endpoint exists but doesn't support GET, which is acceptable
               return {
@@ -254,29 +254,29 @@ export class DaemonServer {
                 data: {
                   provider: aiConfig.provider,
                   endpoint: endpoint,
-                  status: 'reachable'
-                }
+                  status: 'reachable',
+                },
               };
             } else {
               return {
                 success: false,
                 error: `Endpoint response error: ${response.status}`,
-                data: { endpoint: endpoint }
+                data: { endpoint: endpoint },
               };
             }
           } catch (error: any) {
             return {
               success: false,
               error: `Cannot connect to endpoint: ${error.message}`,
-              data: { endpoint: endpoint }
+              data: { endpoint: endpoint },
             };
           }
-          
+
         default:
           return {
             success: false,
             error: `Unsupported provider: ${aiConfig.provider}`,
-            data: { provider: aiConfig.provider }
+            data: { provider: aiConfig.provider },
           };
       }
     } catch (error: any) {
@@ -284,7 +284,7 @@ export class DaemonServer {
       return {
         success: false,
         error: `Error during testing: ${error.message}`,
-        data: null
+        data: null,
       };
     }
   }
@@ -293,30 +293,30 @@ export class DaemonServer {
   private static async testCloudProvider(
     provider: string,
     apiKey: string,
-    model?: string
+    model?: string,
   ): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
       // Get endpoint and headers based on provider
       const { endpoint, headers } = this.getProviderConfig(provider, apiKey, model);
-      
+
       // Create a simple test request
       const testBody = this.createTestRequest(provider, model);
-      
+
       // Use AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-      
+
       logger.info(`[AI] Testing ${provider} API at ${endpoint}`);
-      
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(testBody),
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (response.ok) {
         const data = await response.json() as any;
         return {
@@ -325,13 +325,13 @@ export class DaemonServer {
             provider: provider,
             model: model,
             responseTime: 'ok',
-            details: 'API responded successfully'
-          }
+            details: 'API responded successfully',
+          },
         };
       } else {
         const errorText = await response.text();
         let errorMessage = `API returned ${response.status}`;
-        
+
         // Parse error message if possible
         try {
           const errorData = JSON.parse(errorText);
@@ -346,83 +346,83 @@ export class DaemonServer {
             errorMessage = `${errorMessage}: ${errorText}`;
           }
         }
-        
+
         return {
           success: false,
           error: errorMessage,
           data: {
             status: response.status,
-            provider: provider
-          }
+            provider: provider,
+          },
         };
       }
     } catch (error: any) {
       logger.error(`[AI] ${provider} API test failed: ${error.message}`);
-      
+
       let errorMessage = error.message;
       if (error.name === 'AbortError') {
         errorMessage = 'Request timeout (15 seconds)';
       } else if (error.message.includes('fetch failed')) {
         errorMessage = 'Network error - check internet connection';
       }
-      
+
       return {
         success: false,
         error: errorMessage,
         data: {
           provider: provider,
-          errorType: error.name
-        }
+          errorType: error.name,
+        },
       };
     }
   }
-  
+
   // Get provider-specific configuration
   private static getProviderConfig(
     provider: string,
     apiKey: string,
-    model?: string
+    model?: string,
   ): { endpoint: string; headers: Record<string, string> } {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
-    
+
     let endpoint = '';
-    
+
     switch (provider) {
       case 'openai':
         endpoint = 'https://api.openai.com/v1/chat/completions';
         headers['Authorization'] = `Bearer ${apiKey}`;
         break;
-        
+
       case 'deepseek':
         endpoint = 'https://api.deepseek.com/v1/chat/completions';
         headers['Authorization'] = `Bearer ${apiKey}`;
         break;
-        
+
       case 'anthropic':
         endpoint = 'https://api.anthropic.com/v1/messages';
         headers['x-api-key'] = apiKey;
         headers['anthropic-version'] = '2023-06-01';
         break;
-        
+
       case 'cohere':
         endpoint = 'https://api.cohere.ai/v1/generate';
         headers['Authorization'] = `Bearer ${apiKey}`;
         break;
-        
+
       default:
         throw new Error(`Unsupported provider for direct API test: ${provider}`);
     }
-    
+
     return { endpoint, headers };
   }
-  
+
   // Create test request for different providers
   private static createTestRequest(provider: string, model?: string): any {
     const defaultModel = this.getDefaultModel(provider);
     const testModel = model || defaultModel;
-    
+
     switch (provider) {
       case 'openai':
       case 'deepseek':
@@ -431,17 +431,17 @@ export class DaemonServer {
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful assistant. Respond with "OK" to confirm the connection.'
+              content: 'You are a helpful assistant. Respond with "OK" to confirm the connection.',
             },
             {
               role: 'user',
-              content: 'Test connection - please respond with "OK"'
-            }
+              content: 'Test connection - please respond with "OK"',
+            },
           ],
           max_tokens: 10,
-          temperature: 0.1
+          temperature: 0.1,
         };
-        
+
       case 'anthropic':
         return {
           model: testModel,
@@ -449,24 +449,24 @@ export class DaemonServer {
           messages: [
             {
               role: 'user',
-              content: 'Test connection - please respond with "OK"'
-            }
-          ]
+              content: 'Test connection - please respond with "OK"',
+            },
+          ],
         };
-        
+
       case 'cohere':
         return {
           model: testModel,
           prompt: 'Test connection - please respond with "OK"',
           max_tokens: 10,
-          temperature: 0.1
+          temperature: 0.1,
         };
-        
+
       default:
         throw new Error(`Unsupported provider for test request: ${provider}`);
     }
   }
-  
+
   // Get default model for provider
   private static getDefaultModel(provider: string): string {
     switch (provider) {

@@ -21,7 +21,7 @@ export interface RetryResult<T> {
 export class RetryManager {
   static async executeWithRetry<T>(
     operation: () => Promise<T>,
-    options: RetryOptions = {}
+    options: RetryOptions = {},
   ): Promise<RetryResult<T>> {
     const {
       maxRetries = 3,
@@ -30,7 +30,7 @@ export class RetryManager {
       backoffFactor = 2,
       jitter = true,
       retryableErrors = [],
-      nonRetryableErrors = []
+      nonRetryableErrors = [],
     } = options;
 
     let lastError: Error | undefined;
@@ -45,7 +45,7 @@ export class RetryManager {
         }
 
         const result = await operation();
-        
+
         if (attempt > 0) {
           logger.info(`Success on retry attempt ${attempt}`);
         }
@@ -54,12 +54,12 @@ export class RetryManager {
           success: true,
           result,
           attempts: attempt + 1,
-          totalTime: Date.now() - startTime
+          totalTime: Date.now() - startTime,
         };
 
       } catch (error: any) {
         lastError = error;
-        
+
         // Check if it's a non-retryable error
         if (this.isNonRetryableError(error, nonRetryableErrors)) {
           logger.warn(`Non-retryable error encountered: ${error.message}`);
@@ -67,7 +67,7 @@ export class RetryManager {
         }
 
         // Check if it's a retryable error
-        const shouldRetry = attempt < maxRetries && 
+        const shouldRetry = attempt < maxRetries &&
           (retryableErrors.length === 0 || this.isRetryableError(error, retryableErrors));
 
         logger.warn(`Attempt ${attempt + 1} failed: ${error.message}`);
@@ -85,7 +85,7 @@ export class RetryManager {
       success: false,
       error: lastError || new Error('Operation failed'),
       attempts: maxRetries + 1,
-      totalTime: Date.now() - startTime
+      totalTime: Date.now() - startTime,
     };
   }
 
@@ -94,17 +94,17 @@ export class RetryManager {
     initialDelay: number,
     maxDelay: number,
     backoffFactor: number,
-    jitter: boolean
+    jitter: boolean,
   ): number {
     // Exponential backoff
     let delay = initialDelay * Math.pow(backoffFactor, attempt - 1);
-    
+
     // Add jitter (randomness)
     if (jitter) {
       const jitterAmount = delay * 0.1; // 10% jitter
       delay += Math.random() * jitterAmount * 2 - jitterAmount;
     }
-    
+
     // Limit maximum delay
     return Math.min(delay, maxDelay);
   }
@@ -133,9 +133,9 @@ export class RetryManager {
     const networkKeywords = [
       'network', 'connection', 'socket', 'timeout', 'econnrefused',
       'econnreset', 'eaddrinuse', 'eaddrinfo', 'enetunreach',
-      'fetch failed', 'request failed', 'aborted'
+      'fetch failed', 'request failed', 'aborted',
     ];
-    
+
     const errorMessage = error.message.toLowerCase();
     return networkKeywords.some(keyword => errorMessage.includes(keyword));
   }
@@ -149,9 +149,9 @@ export class RetryManager {
   private static isConfigurationError(error: Error): boolean {
     const configKeywords = [
       'configuration', 'config', 'invalid', 'missing', 'required',
-      'not found', 'undefined', 'null', 'api key', 'endpoint'
+      'not found', 'undefined', 'null', 'api key', 'endpoint',
     ];
-    
+
     const errorMessage = error.message.toLowerCase();
     return configKeywords.some(keyword => errorMessage.includes(keyword));
   }
@@ -159,9 +159,9 @@ export class RetryManager {
   private static isAuthenticationError(error: Error): boolean {
     const authKeywords = [
       'authentication', 'authorization', 'unauthorized', 'forbidden',
-      'invalid token', 'api key', 'credentials', '401', '403'
+      'invalid token', 'api key', 'credentials', '401', '403',
     ];
-    
+
     const errorMessage = error.message.toLowerCase();
     return authKeywords.some(keyword => errorMessage.includes(keyword));
   }
@@ -173,24 +173,24 @@ export class RetryManager {
   // Batch operation retry
   static async executeBatchWithRetry<T>(
     operations: Array<() => Promise<T>>,
-    options: RetryOptions = {}
+    options: RetryOptions = {},
   ): Promise<Array<RetryResult<T>>> {
     const results: Array<RetryResult<T>> = [];
-    
+
     for (let i = 0; i < operations.length; i++) {
       logger.debug(`Executing batch operation ${i + 1}/${operations.length}`);
       const result = await this.executeWithRetry(operations[i], options);
       results.push(result);
-      
+
       // If operation fails, can choose to continue or stop
-      if (!result.success && options.nonRetryableErrors?.some(pattern => 
-        result.error?.message.toLowerCase().includes(pattern.toLowerCase())
+      if (!result.success && options.nonRetryableErrors?.some(pattern =>
+        result.error?.message.toLowerCase().includes(pattern.toLowerCase()),
       )) {
         logger.warn(`Stopping batch execution due to non-retryable error in operation ${i + 1}`);
         break;
       }
     }
-    
+
     return results;
   }
 
@@ -203,7 +203,7 @@ export class RetryManager {
     const {
       failureThreshold = 5,
       resetTimeout = 60000, // 60seconds
-      halfOpenMaxAttempts = 3
+      halfOpenMaxAttempts = 3,
     } = options;
 
     let state: 'closed' | 'open' | 'half-open' = 'closed';
@@ -213,7 +213,7 @@ export class RetryManager {
 
     return async function withCircuitBreaker<T>(
       operation: () => Promise<T>,
-      retryOptions?: RetryOptions
+      retryOptions?: RetryOptions,
     ): Promise<RetryResult<T>> {
       const now = Date.now();
 
@@ -241,7 +241,7 @@ export class RetryManager {
 
       try {
         const result = await RetryManager.executeWithRetry(operation, retryOptions);
-        
+
         if (result.success) {
           // Operation successful, reset circuit breaker
           if (state === 'half-open') {
@@ -254,24 +254,24 @@ export class RetryManager {
           // Operation failed, update failure count
           failureCount++;
           lastFailureTime = now;
-          
+
           if (failureCount >= failureThreshold) {
             state = 'open';
             logger.error(`Circuit breaker opened after ${failureCount} failures`);
           }
         }
-        
+
         return result;
       } catch (error: any) {
         // Update failure count
         failureCount++;
         lastFailureTime = now;
-        
+
         if (failureCount >= failureThreshold) {
           state = 'open';
           logger.error(`Circuit breaker opened after ${failureCount} failures`);
         }
-        
+
         throw error;
       }
     };
@@ -284,14 +284,14 @@ export class RetryManager {
     failedOperations: number;
     averageRetries: number;
     averageTime: number;
-  } {
+    } {
     // Here you can add actual statistical tracking
     return {
       totalOperations: 0,
       successfulOperations: 0,
       failedOperations: 0,
       averageRetries: 0,
-      averageTime: 0
+      averageTime: 0,
     };
   }
 }

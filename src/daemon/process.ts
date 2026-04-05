@@ -53,7 +53,7 @@ export class ProcessManager {
   getStatuses() {
     return Array.from(this.processes.keys()).map(name => ({
       name,
-      status: 'running'
+      status: 'running',
     }));
   }
 }

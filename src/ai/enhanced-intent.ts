@@ -18,7 +18,7 @@ export class EnhancedIntentEngine {
   async parse(query: string, availableTools: string[]): Promise<IntentResult | null> {
     // Simple implementation for now
     // In a real implementation, this would use AI to parse the query
-    
+
     // Find the first tool that matches the query
     for (const tool of availableTools) {
       if (tool.toLowerCase().includes(query.toLowerCase())) {
@@ -27,11 +27,11 @@ export class EnhancedIntentEngine {
           service,
           method,
           parameters: {},
-          confidence: 0.7
+          confidence: 0.7,
         };
       }
     }
-    
+
     return null;
   }
 

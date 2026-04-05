@@ -14,13 +14,13 @@ export type {
   AIConfig,
   DetectionResult,
   DockerConnectionConfig,
-  RuntimeSpecificConfig
+  RuntimeSpecificConfig,
 } from './types';
 
 // Export constants
 export {
   MCPILOT_HOME,
-  CONFIG_PATH
+  CONFIG_PATH,
 } from './constants';
 
 // Export error handling
@@ -35,7 +35,7 @@ export {
   createError,
   wrapError,
   isMCPilotError,
-  shouldRetry
+  shouldRetry,
 } from './error-handler';
 
 // Export AI error handling

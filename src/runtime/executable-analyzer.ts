@@ -39,7 +39,7 @@ export class ExecutableAnalyzer {
       this.analyzeWithMagicNumbers(filePath),
       this.analyzeShebang(filePath),
       this.analyzeByPermissions(filePath),
-      this.analyzeByExtension(filePath)
+      this.analyzeByExtension(filePath),
     ].filter(analysis => analysis !== null);
 
     if (analyses.length === 0) {
@@ -47,14 +47,14 @@ export class ExecutableAnalyzer {
     }
 
     // Select analysis result with highest confidence
-    const bestAnalysis = analyses.reduce((best, current) => 
-      current.confidence > best.confidence ? current : best
+    const bestAnalysis = analyses.reduce((best, current) =>
+      current.confidence > best.confidence ? current : best,
     );
 
     logger.debug(`Executable analysis for ${filePath}:`, {
       type: bestAnalysis.type,
       confidence: bestAnalysis.confidence,
-      method: bestAnalysis.details.method
+      method: bestAnalysis.details.method,
     });
 
     return bestAnalysis;
@@ -66,7 +66,7 @@ export class ExecutableAnalyzer {
   private static analyzeWithFileCommand(filePath: string): ExecutableAnalysis | null {
     try {
       const output = execSync(`file -b "${filePath}"`, { encoding: 'utf-8' }).trim();
-      
+
       let type: RuntimeType = 'binary';
       let confidence = 0.8;
       let details = '';
@@ -110,8 +110,8 @@ export class ExecutableAnalyzer {
         details: {
           method: 'fileCommand',
           result: details,
-          rawOutput: output
-        }
+          rawOutput: output,
+        },
       };
     } catch (error) {
       // file command unavailable or failed
@@ -125,7 +125,7 @@ export class ExecutableAnalyzer {
   private static analyzeWithMagicNumbers(filePath: string): ExecutableAnalysis | null {
     try {
       const buffer = fs.readFileSync(filePath, { flag: 'r' });
-      
+
       // Only read first few bytes for magic number detection
       const header = buffer.slice(0, 16);
       const hex = header.toString('hex');
@@ -138,8 +138,8 @@ export class ExecutableAnalyzer {
           details: {
             method: 'magicNumber',
             result: 'ELF executable',
-            rawOutput: hex.substring(0, 8)
-          }
+            rawOutput: hex.substring(0, 8),
+          },
         };
       }
 
@@ -152,8 +152,8 @@ export class ExecutableAnalyzer {
           details: {
             method: 'magicNumber',
             result: 'Mach-O executable',
-            rawOutput: hex.substring(0, 8)
-          }
+            rawOutput: hex.substring(0, 8),
+          },
         };
       }
 
@@ -165,8 +165,8 @@ export class ExecutableAnalyzer {
           details: {
             method: 'magicNumber',
             result: 'Windows PE executable',
-            rawOutput: hex.substring(0, 4)
-          }
+            rawOutput: hex.substring(0, 4),
+          },
         };
       }
 
@@ -178,8 +178,8 @@ export class ExecutableAnalyzer {
           details: {
             method: 'magicNumber',
             result: 'Java class file',
-            rawOutput: hex.substring(0, 8)
-          }
+            rawOutput: hex.substring(0, 8),
+          },
         };
       }
 
@@ -232,8 +232,8 @@ export class ExecutableAnalyzer {
         details: {
           method: 'shebang',
           result: shebang,
-          rawOutput: firstLine
-        }
+          rawOutput: firstLine,
+        },
       };
     } catch (error) {
       // File may not be a text file
@@ -257,8 +257,8 @@ export class ExecutableAnalyzer {
           details: {
             method: 'permissions',
             result: 'Executable file',
-            rawOutput: `mode: 0o${mode.toString(8)}`
-          }
+            rawOutput: `mode: 0o${mode.toString(8)}`,
+          },
         };
       }
 
@@ -273,7 +273,7 @@ export class ExecutableAnalyzer {
    */
   private static analyzeByExtension(filePath: string): ExecutableAnalysis | null {
     const ext = path.extname(filePath).toLowerCase();
-    
+
     const extensionMap: Record<string, { type: RuntimeType; confidence: number }> = {
       '.exe': { type: 'binary', confidence: 0.7 },
       '.bin': { type: 'binary', confidence: 0.7 },
@@ -286,7 +286,7 @@ export class ExecutableAnalyzer {
       '.rs': { type: 'rust', confidence: 0.5 },
       '.java': { type: 'java', confidence: 0.5 },
       '.class': { type: 'java', confidence: 0.6 },
-      '.jar': { type: 'java', confidence: 0.6 }
+      '.jar': { type: 'java', confidence: 0.6 },
     };
 
     const mapping = extensionMap[ext];
@@ -297,8 +297,8 @@ export class ExecutableAnalyzer {
         details: {
           method: 'extension',
           result: `File extension: ${ext}`,
-          rawOutput: ext
-        }
+          rawOutput: ext,
+        },
       };
     }
 
@@ -311,7 +311,7 @@ export class ExecutableAnalyzer {
   private static isExecutable(filePath: string): boolean {
     try {
       const stats = fs.statSync(filePath);
-      
+
       // Check Unix execution permissions
       if (process.platform !== 'win32') {
         const mode = stats.mode;
@@ -360,7 +360,7 @@ export class ExecutableAnalyzer {
 
       for (const file of files) {
         const filePath = path.join(dirPath, file);
-        
+
         try {
           const stats = fs.statSync(filePath);
           if (!stats.isFile()) {
@@ -387,7 +387,7 @@ export class ExecutableAnalyzer {
    */
   static getPrimaryExecutable(dirPath: string): string | null {
     const executables = this.findExecutables(dirPath);
-    
+
     if (executables.length === 0) {
       return null;
     }
@@ -423,7 +423,7 @@ export class ExecutableAnalyzer {
       if (analysis) {
         results.push({
           file: path.relative(dirPath, executable),
-          analysis
+          analysis,
         });
       }
     }

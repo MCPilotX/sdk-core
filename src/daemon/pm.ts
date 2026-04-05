@@ -27,7 +27,7 @@ export class ProcessManager extends EventEmitter {
   }
 
   loadFromConfig() {
-    if (!fs.existsSync(CONFIG_PATH)) return;
+    if (!fs.existsSync(CONFIG_PATH)) {return;}
     const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
     const services = config.services?.instances || [];
     services.forEach((s: any) => {
@@ -39,8 +39,8 @@ export class ProcessManager extends EventEmitter {
 
   async startService(name: string): Promise<void> {
     const instance = this.instances.get(name);
-    if (!instance) throw new Error(`Service ${name} not found`);
-    if (instance.status === 'running') return;
+    if (!instance) {throw new Error(`Service ${name} not found`);}
+    if (instance.status === 'running') {return;}
 
     try {
       if (instance.runtime === 'node') {
@@ -58,11 +58,11 @@ export class ProcessManager extends EventEmitter {
       } else {
         throw new Error(`Runtime ${instance.runtime} not supported yet.`);
       }
-      
+
       instance.status = 'running';
       console.log(`[PM] Service ${name} (${instance.runtime}) is now running.`);
       await this.discoverTools(name);
-      
+
     } catch (err: any) {
       instance.status = 'error';
       instance.error = err.message;
@@ -72,7 +72,7 @@ export class ProcessManager extends EventEmitter {
 
   async discoverTools(name: string) {
     const instance = this.instances.get(name);
-    if (!instance || !instance.adapter) return;
+    if (!instance || !instance.adapter) {return;}
 
     console.log(`[PM] Discovering tools for ${name}...`);
     try {
@@ -80,7 +80,7 @@ export class ProcessManager extends EventEmitter {
       const response = await instance.adapter.call('tools/list', {});
       instance.tools = response.result?.tools || [];
       console.log(`[PM] Discovered ${instance.tools?.length} tools from ${name}.`);
-      
+
       // Trigger event to notify Orchestrator for vector indexing
       this.emit('tools_discovered', { service: name, tools: instance.tools });
     } catch (e: any) {
@@ -90,14 +90,14 @@ export class ProcessManager extends EventEmitter {
 
   async callService(name: string, method: string, params: any = {}): Promise<any> {
     const instance = this.instances.get(name);
-    if (!instance) throw new Error(`Service ${name} not found`);
-    if (instance.status !== 'running') await this.startService(name);
-    if (!instance.adapter) throw new Error(`Adapter for ${name} not initialized.`);
-    
+    if (!instance) {throw new Error(`Service ${name} not found`);}
+    if (instance.status !== 'running') {await this.startService(name);}
+    if (!instance.adapter) {throw new Error(`Adapter for ${name} not initialized.`);}
+
     // Use MCP protocol format for tool calls
     return await instance.adapter.call('tools/call', {
       name: method,
-      arguments: params
+      arguments: params,
     });
   }
 
@@ -108,7 +108,7 @@ export class ProcessManager extends EventEmitter {
       runtime: i.runtime,
       status: i.status,
       error: i.error,
-      toolsCount: i.tools?.length || 0
+      toolsCount: i.tools?.length || 0,
     }));
   }
 

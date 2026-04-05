@@ -55,14 +55,14 @@ export class PythonAdapter {
   }
 
   async call(method: string, params: any = {}): Promise<any> {
-    if (!this.process) throw new Error(`Service ${this.options.name} is not running.`);
+    if (!this.process) {throw new Error(`Service ${this.options.name} is not running.`);}
 
     const id = ++this.requestId;
     const request = {
       jsonrpc: '2.0',
       id,
       method,
-      params
+      params,
     };
 
     return new Promise((resolve) => {

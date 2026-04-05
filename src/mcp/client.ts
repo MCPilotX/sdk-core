@@ -51,7 +51,7 @@ export class MCPClient extends EventEmitter {
       maxRetries: 3,
       ...config,
     };
-    
+
     this.transport = TransportFactory.create(config.transport);
     this.setupTransportListeners();
   }
@@ -67,7 +67,7 @@ export class MCPClient extends EventEmitter {
       await this.transport.connect();
       this.connected = true;
       this.emitEvent('connected');
-      
+
       // Automatically fetch tool list after connection
       if (this.config.autoConnect) {
         await this.refreshTools();
@@ -88,14 +88,14 @@ export class MCPClient extends EventEmitter {
     try {
       await this.transport.disconnect();
       this.connected = false;
-      
+
       // Clean up all pending requests
       this.pendingRequests.forEach(({ reject, timeout }) => {
         clearTimeout(timeout);
         reject(new Error('Disconnected'));
       });
       this.pendingRequests.clear();
-      
+
       this.emitEvent('disconnected');
     } catch (error) {
       this.emitEvent('error', error);
@@ -241,7 +241,7 @@ export class MCPClient extends EventEmitter {
   private handleTransportMessage(message: any): void {
     try {
       const response = message as JSONRPCResponse;
-      
+
       // Handle request response
       if (response.id && this.pendingRequests.has(response.id)) {
         const { resolve, reject, timeout } = this.pendingRequests.get(response.id)!;
@@ -257,7 +257,7 @@ export class MCPClient extends EventEmitter {
           resolve(response.result);
         }
       }
-      
+
       // Handle server-pushed notifications (messages without id)
       else if (!response.id) {
         this.handleNotification(response);
@@ -296,13 +296,13 @@ export class MCPClient extends EventEmitter {
 
   async withRetry<T>(operation: () => Promise<T>): Promise<T> {
     let lastError: Error;
-    
+
     for (let attempt = 1; attempt <= this.config.maxRetries!; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt < this.config.maxRetries!) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -310,7 +310,7 @@ export class MCPClient extends EventEmitter {
         }
       }
     }
-    
+
     throw lastError!;
   }
 
@@ -332,7 +332,7 @@ export class MCPClient extends EventEmitter {
     this.disconnect().catch(() => {
       // Ignore errors when disconnecting
     });
-    
+
     this.removeAllListeners();
     this.pendingRequests.clear();
     this.tools = [];

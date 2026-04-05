@@ -9,36 +9,36 @@ export class GoAdapter implements RuntimeAdapter {
 
   getSpawnArgs(config: ServiceConfig) {
     const goPath = this.findGoBinary(config);
-    
+
     return {
       command: goPath,
-      args: ['run', config.entry, ...(config.args || [])]
+      args: ['run', config.entry, ...(config.args || [])],
     };
   }
 
   async setup(config: ServiceConfig): Promise<void> {
     console.log(`[Go] Setting up service: ${config.name}`);
-    
+
     // Check if Go is installed
     try {
       const { execSync } = require('child_process');
       execSync('go version', { stdio: 'ignore' });
-      console.log(`[Go] Go is installed`);
+      console.log('[Go] Go is installed');
     } catch (error) {
       throw new Error('Go is not installed or not in PATH. Please install Go from https://golang.org/dl/');
     }
 
     const servicePath = config.path || '.';
-    
+
     // Check go.mod file
     const goModPath = path.join(servicePath, 'go.mod');
     if (!fs.existsSync(goModPath)) {
       console.log(`[Go] go.mod not found, creating basic go.mod for ${config.name}`);
       try {
         const { execSync } = require('child_process');
-        execSync(`go mod init ${config.name}`, { 
+        execSync(`go mod init ${config.name}`, {
           stdio: 'inherit',
-          cwd: servicePath 
+          cwd: servicePath,
         });
       } catch (error) {
         console.warn(`[Go] Failed to create go.mod: ${error.message}`);
@@ -46,27 +46,27 @@ export class GoAdapter implements RuntimeAdapter {
     }
 
     // Download dependencies
-    console.log(`[Go] Downloading dependencies...`);
+    console.log('[Go] Downloading dependencies...');
     try {
       const { execSync } = require('child_process');
-      execSync('go mod tidy', { 
+      execSync('go mod tidy', {
         stdio: 'inherit',
-        cwd: servicePath 
+        cwd: servicePath,
       });
-      console.log(`[Go] Dependencies downloaded successfully`);
+      console.log('[Go] Dependencies downloaded successfully');
     } catch (error) {
       console.warn(`[Go] Failed to download dependencies: ${error.message}`);
     }
 
     // Build executable (optional)
     if (config.build) {
-      console.log(`[Go] Building executable...`);
+      console.log('[Go] Building executable...');
       try {
         const { execSync } = require('child_process');
         const outputName = config.output || config.name;
-        execSync(`go build -o ${outputName} ${config.entry}`, { 
+        execSync(`go build -o ${outputName} ${config.entry}`, {
           stdio: 'inherit',
-          cwd: servicePath 
+          cwd: servicePath,
         });
         console.log(`[Go] Executable built: ${outputName}`);
       } catch (error) {
@@ -91,7 +91,7 @@ export class GoAdapter implements RuntimeAdapter {
       config.name,
       `./${config.name}`,
       path.join(config.path || '.', config.name),
-      path.join(config.path || '.', 'main')
+      path.join(config.path || '.', 'main'),
     ];
 
     for (const output of possibleOutputs) {
@@ -115,7 +115,7 @@ export class GoAdapter implements RuntimeAdapter {
 
   async startService(config: ServiceConfig): Promise<ChildProcess> {
     const { command, args } = this.getSpawnArgs(config);
-    
+
     console.log(`[Go] Starting service: ${config.name}`);
     console.log(`[Go] Command: ${command} ${args.join(' ')}`);
 
@@ -124,9 +124,9 @@ export class GoAdapter implements RuntimeAdapter {
       detached: false,
       env: {
         ...process.env,
-        ...config.env
+        ...config.env,
       },
-      cwd: config.path || '.'
+      cwd: config.path || '.',
     });
 
     childProcess.stdout?.on('data', (data) => {
@@ -152,7 +152,7 @@ export class GoAdapter implements RuntimeAdapter {
 
   async stopService(): Promise<void> {
     if (this.process) {
-      console.log(`[Go] Stopping service`);
+      console.log('[Go] Stopping service');
       this.process.kill();
       this.process = null;
     }
@@ -179,13 +179,13 @@ export class GoAdapter implements RuntimeAdapter {
 
   async compile(config: ServiceConfig): Promise<boolean> {
     console.log(`[Go] Compiling service: ${config.name}`);
-    
+
     try {
       const { execSync } = require('child_process');
       const outputName = config.output || config.name;
-      execSync(`go build -o ${outputName} ${config.entry}`, { 
+      execSync(`go build -o ${outputName} ${config.entry}`, {
         stdio: 'inherit',
-        cwd: config.path || '.'
+        cwd: config.path || '.',
       });
       console.log(`[Go] Successfully compiled: ${outputName}`);
       return true;
@@ -197,14 +197,14 @@ export class GoAdapter implements RuntimeAdapter {
 
   async test(config: ServiceConfig): Promise<boolean> {
     console.log(`[Go] Running tests for service: ${config.name}`);
-    
+
     try {
       const { execSync } = require('child_process');
-      execSync('go test ./...', { 
+      execSync('go test ./...', {
         stdio: 'inherit',
-        cwd: config.path || '.'
+        cwd: config.path || '.',
       });
-      console.log(`[Go] Tests passed`);
+      console.log('[Go] Tests passed');
       return true;
     } catch (error) {
       console.error(`[Go] Tests failed: ${error.message}`);

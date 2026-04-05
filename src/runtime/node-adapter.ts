@@ -12,15 +12,15 @@ export class NodeAdapter implements RuntimeAdapter {
     } catch {
       command = 'node';
     }
-    
+
     const args = command === 'bun' ? [config.entry, ...(config.args || [])] : [config.entry, ...(config.args || [])];
-    
+
     return {
       command,
-      args
+      args,
     };
   }
-  
+
   async setup(config: ServiceConfig) {
     // No special setup needed for Node/Bun
   }

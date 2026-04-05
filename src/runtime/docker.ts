@@ -20,7 +20,7 @@ export class DockerAdapter {
       // Core command: docker run -i (interactive mode) --rm (remove after running)
       // Map container stdio to host process
       const args = ['run', '-i', '--rm', '--name', `mcp-${this.options.name}`];
-      
+
       // Inject environment variables
       if (this.options.env) {
         Object.entries(this.options.env).forEach(([k, v]) => {
@@ -59,7 +59,7 @@ export class DockerAdapter {
   }
 
   async call(method: string, params: any = {}): Promise<any> {
-    if (!this.process) throw new Error(`Docker service ${this.options.name} is not running.`);
+    if (!this.process) {throw new Error(`Docker service ${this.options.name} is not running.`);}
 
     const id = ++this.requestId;
     const request = { jsonrpc: '2.0', id, method, params };

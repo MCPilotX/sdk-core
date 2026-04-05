@@ -2,10 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { RuntimeDetector } from './detector';
 import { ExecutableAnalyzer } from './executable-analyzer';
-import { 
-  RuntimeType, 
-  DetectionResult, 
-  DetectionEvidence 
+import {
+  RuntimeType,
+  DetectionResult,
+  DetectionEvidence,
 } from '../core/types';
 import { logger } from '../core/logger';
 
@@ -23,18 +23,18 @@ export class EnhancedRuntimeDetector {
     // Run detectors in parallel
     const [legacyResult, enhancedResult] = await Promise.all([
       this.runLegacyDetector(servicePath),
-      this.runEnhancedDetection(servicePath)
+      this.runEnhancedDetection(servicePath),
     ]);
 
     // Record detection results
     logger.debug('Detection results:', {
       legacy: { runtime: legacyResult.runtime, confidence: legacyResult.confidence },
-      enhanced: { runtime: enhancedResult.runtime, confidence: enhancedResult.confidence }
+      enhanced: { runtime: enhancedResult.runtime, confidence: enhancedResult.confidence },
     });
 
     // Select best result (based on confidence)
     let finalResult: DetectionResult;
-    
+
     if (enhancedResult.confidence >= 0.7) {
       // Enhanced detector has high confidence, use its result
       finalResult = enhancedResult;
@@ -43,7 +43,7 @@ export class EnhancedRuntimeDetector {
       finalResult = {
         ...legacyResult,
         source: 'legacy',
-        warning: 'Using traditional detector, suggest manual verification or use --runtime parameter to explicitly specify'
+        warning: 'Using traditional detector, suggest manual verification or use --runtime parameter to explicitly specify',
       };
     } else {
       // Both have low confidence, require user to explicitly specify
@@ -53,17 +53,17 @@ export class EnhancedRuntimeDetector {
         evidence: {
           fileExtensions: {
             extensions: [],
-            confidence: 0
-          }
+            confidence: 0,
+          },
         },
         source: 'enhanced',
         warning: this.generateLowConfidenceWarning(legacyResult, enhancedResult),
-        suggestions: this.generateRuntimeSuggestions(servicePath)
+        suggestions: this.generateRuntimeSuggestions(servicePath),
       };
     }
 
     logger.info(`Final detection result: ${finalResult.runtime} (confidence: ${finalResult.confidence.toFixed(2)}, source: ${finalResult.source})`);
-    
+
     if (finalResult.warning) {
       logger.warn(finalResult.warning);
     }
@@ -77,14 +77,14 @@ export class EnhancedRuntimeDetector {
   private static runLegacyDetector(servicePath: string): DetectionResult {
     try {
       const runtime = RuntimeDetector.detect(servicePath);
-      
+
       // Traditional detector confidence is based on detection method reliability
       let confidence = 0.5; // Base confidence
       const evidence: DetectionEvidence = {
         fileExtensions: {
           extensions: [],
-          confidence: 0.3
-        }
+          confidence: 0.3,
+        },
       };
 
       // Adjust confidence based on detected runtime type
@@ -93,42 +93,42 @@ export class EnhancedRuntimeDetector {
           confidence = 0.8; // Dockerfile is usually clear
           evidence.projectFiles = {
             files: ['Dockerfile'],
-            confidence: 0.8
+            confidence: 0.8,
           };
           break;
         case 'node':
           confidence = 0.7; // package.json is usually clear
           evidence.projectFiles = {
             files: ['package.json'],
-            confidence: 0.7
+            confidence: 0.7,
           };
           break;
         case 'go':
           confidence = 0.7; // go.mod is usually clear
           evidence.projectFiles = {
             files: ['go.mod'],
-            confidence: 0.7
+            confidence: 0.7,
           };
           break;
         case 'rust':
           confidence = 0.7; // Cargo.toml is usually clear
           evidence.projectFiles = {
             files: ['Cargo.toml'],
-            confidence: 0.7
+            confidence: 0.7,
           };
           break;
         case 'python':
           confidence = 0.6; // May have multiple configuration files
           evidence.projectFiles = {
             files: this.findPythonConfigFiles(servicePath),
-            confidence: 0.6
+            confidence: 0.6,
           };
           break;
         case 'java':
           confidence = 0.6; // May have multiple build systems
           evidence.projectFiles = {
             files: this.findJavaConfigFiles(servicePath),
-            confidence: 0.6
+            confidence: 0.6,
           };
           break;
         default:
@@ -140,7 +140,7 @@ export class EnhancedRuntimeDetector {
         runtime,
         confidence,
         evidence,
-        source: 'legacy'
+        source: 'legacy',
       };
     } catch (error: any) {
       logger.error(`Legacy detector failed: ${error.message}`);
@@ -149,7 +149,7 @@ export class EnhancedRuntimeDetector {
         confidence: 0.1,
         evidence: {},
         source: 'legacy',
-        warning: `Traditional detector failed: ${error.message}`
+        warning: `Traditional detector failed: ${error.message}`,
       };
     }
   }
@@ -196,7 +196,7 @@ export class EnhancedRuntimeDetector {
       }
 
       // Calculate final confidence and runtime type
-      let confidence = totalWeight > 0 ? weightedSum / totalWeight : 0;
+      const confidence = totalWeight > 0 ? weightedSum / totalWeight : 0;
       const runtime = this.determineRuntimeFromEvidence(evidence, confidence);
 
       // If confidence is too low, add warning
@@ -211,7 +211,7 @@ export class EnhancedRuntimeDetector {
         evidence,
         source: 'enhanced',
         warning,
-        suggestions: this.generateRuntimeSuggestions(servicePath)
+        suggestions: this.generateRuntimeSuggestions(servicePath),
       };
     } catch (error: any) {
       logger.error(`Enhanced detector failed: ${error.message}`);
@@ -220,7 +220,7 @@ export class EnhancedRuntimeDetector {
         confidence: 0.1,
         evidence: {},
         source: 'enhanced',
-        warning: `Enhanced detector failed: ${error.message}`
+        warning: `Enhanced detector failed: ${error.message}`,
       };
     }
   }
@@ -230,7 +230,7 @@ export class EnhancedRuntimeDetector {
    */
   private static analyzeExecutables(servicePath: string) {
     const executables = ExecutableAnalyzer.findExecutables(servicePath);
-    
+
     if (executables.length === 0) {
       return null;
     }
@@ -249,7 +249,7 @@ export class EnhancedRuntimeDetector {
     return {
       type: analysis.type,
       confidence: analysis.confidence,
-      details: analysis.details
+      details: analysis.details,
     };
   }
 
@@ -258,7 +258,7 @@ export class EnhancedRuntimeDetector {
    */
   private static analyzeProjectFiles(servicePath: string) {
     const configFiles: string[] = [];
-    
+
     // Check various configuration files
     const configPatterns = [
       'Dockerfile', 'docker-compose.yml', 'docker-compose.yaml',
@@ -268,7 +268,7 @@ export class EnhancedRuntimeDetector {
       'requirements.txt', 'setup.py', 'pyproject.toml', 'Pipfile',
       'pom.xml', 'build.gradle', 'build.gradle.kts',
       'Makefile', 'CMakeLists.txt',
-      'mcp-service.json' // Custom configuration file
+      'mcp-service.json', // Custom configuration file
     ];
 
     for (const pattern of configPatterns) {
@@ -298,7 +298,7 @@ export class EnhancedRuntimeDetector {
 
     return {
       files: configFiles,
-      confidence
+      confidence,
     };
   }
 
@@ -313,7 +313,7 @@ export class EnhancedRuntimeDetector {
       for (const file of files) {
         const filePath = path.join(servicePath, file);
         const stat = fs.statSync(filePath);
-        
+
         if (stat.isFile()) {
           const ext = path.extname(file).toLowerCase();
           if (ext) {
@@ -341,7 +341,7 @@ export class EnhancedRuntimeDetector {
 
       return {
         extensions,
-        confidence
+        confidence,
       };
     } catch (error) {
       return null;
@@ -370,7 +370,7 @@ export class EnhancedRuntimeDetector {
       // File extensions have lower confidence
       return {
         extensions,
-        confidence: 0.3
+        confidence: 0.3,
       };
     } catch (error) {
       return null;
@@ -381,8 +381,8 @@ export class EnhancedRuntimeDetector {
    * Determine runtime type from evidence
    */
   private static determineRuntimeFromEvidence(
-    evidence: DetectionEvidence, 
-    confidence: number
+    evidence: DetectionEvidence,
+    confidence: number,
   ): RuntimeType {
     // Prefer executable file analysis results
     if (evidence.executableAnalysis && evidence.executableAnalysis.confidence > 0.7) {
@@ -397,13 +397,13 @@ export class EnhancedRuntimeDetector {
     // Then use project configuration files
     if (evidence.projectFiles) {
       const files = evidence.projectFiles.files;
-      
-      if (files.includes('Dockerfile')) return 'docker';
-      if (files.includes('package.json')) return 'node';
-      if (files.includes('go.mod')) return 'go';
-      if (files.includes('Cargo.toml')) return 'rust';
-      if (files.some(f => f.includes('python') || f.endsWith('.py'))) return 'python';
-      if (files.includes('pom.xml') || files.includes('build.gradle')) return 'java';
+
+      if (files.includes('Dockerfile')) {return 'docker';}
+      if (files.includes('package.json')) {return 'node';}
+      if (files.includes('go.mod')) {return 'go';}
+      if (files.includes('Cargo.toml')) {return 'rust';}
+      if (files.some(f => f.includes('python') || f.endsWith('.py'))) {return 'python';}
+      if (files.includes('pom.xml') || files.includes('build.gradle')) {return 'java';}
     }
 
     // Finally use file statistics
@@ -416,7 +416,7 @@ export class EnhancedRuntimeDetector {
         '.go': 'go',
         '.rs': 'rust',
         '.java': 'java',
-        '.class': 'java'
+        '.class': 'java',
       };
 
       for (const [ext, runtime] of Object.entries(extensionMap)) {
@@ -435,13 +435,13 @@ export class EnhancedRuntimeDetector {
    */
   private static generateLowConfidenceWarning(
     legacyResult: DetectionResult,
-    enhancedResult: DetectionResult
+    enhancedResult: DetectionResult,
   ): string {
-    return `Cannot reliably determine runtime type.\n` +
+    return 'Cannot reliably determine runtime type.\n' +
            `Traditional detector result: ${legacyResult.runtime} (confidence: ${legacyResult.confidence.toFixed(2)})\n` +
            `Enhanced detector result: ${enhancedResult.runtime} (confidence: ${enhancedResult.confidence.toFixed(2)})\n` +
-           `Please use --runtime parameter to explicitly specify runtime type.\n` +
-           `Available options: node, python, docker, go, rust, java, binary`;
+           'Please use --runtime parameter to explicitly specify runtime type.\n' +
+           'Available options: node, python, docker, go, rust, java, binary';
   }
 
   /**
@@ -449,18 +449,18 @@ export class EnhancedRuntimeDetector {
    */
   private static generateRuntimeSuggestions(servicePath: string): string[] {
     const suggestions: string[] = [];
-    
+
     // Check common patterns
-    if (fs.existsSync(path.join(servicePath, 'index.js')) || 
+    if (fs.existsSync(path.join(servicePath, 'index.js')) ||
         fs.existsSync(path.join(servicePath, 'app.js'))) {
       suggestions.push('Detected JavaScript file, may be Node.js service');
     }
-    
-    if (fs.existsSync(path.join(servicePath, 'main.py')) || 
+
+    if (fs.existsSync(path.join(servicePath, 'main.py')) ||
         fs.existsSync(path.join(servicePath, 'app.py'))) {
       suggestions.push('Detected Python file, may be Python service');
     }
-    
+
     const executables = ExecutableAnalyzer.findExecutables(servicePath);
     if (executables.length > 0) {
       suggestions.push(`Found ${executables.length} executable files, may be binary service`);
@@ -475,13 +475,13 @@ export class EnhancedRuntimeDetector {
   private static findPythonConfigFiles(servicePath: string): string[] {
     const files: string[] = [];
     const pythonConfigs = ['requirements.txt', 'setup.py', 'pyproject.toml', 'Pipfile'];
-    
+
     for (const config of pythonConfigs) {
       if (fs.existsSync(path.join(servicePath, config))) {
         files.push(config);
       }
     }
-    
+
     return files;
   }
 
@@ -491,13 +491,13 @@ export class EnhancedRuntimeDetector {
   private static findJavaConfigFiles(servicePath: string): string[] {
     const files: string[] = [];
     const javaConfigs = ['pom.xml', 'build.gradle', 'build.gradle.kts'];
-    
+
     for (const config of javaConfigs) {
       if (fs.existsSync(path.join(servicePath, config))) {
         files.push(config);
       }
     }
-    
+
     return files;
   }
 
@@ -510,15 +510,15 @@ export class EnhancedRuntimeDetector {
       if (fs.existsSync(path.join(servicePath, 'Dockerfile'))) {
         return { runtime: 'docker', confidence: 0.9 };
       }
-      
+
       if (fs.existsSync(path.join(servicePath, 'package.json'))) {
         return { runtime: 'node', confidence: 0.8 };
       }
-      
+
       if (fs.existsSync(path.join(servicePath, 'go.mod'))) {
         return { runtime: 'go', confidence: 0.8 };
       }
-      
+
       if (fs.existsSync(path.join(servicePath, 'Cargo.toml'))) {
         return { runtime: 'rust', confidence: 0.8 };
       }

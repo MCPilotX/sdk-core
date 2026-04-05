@@ -15,7 +15,7 @@ export class ConfigValidator {
       },
       services: {
         autoStart: [],
-      }
+      },
     };
 
     // Handle null or undefined config
@@ -123,7 +123,7 @@ export class ConfigValidator {
     if (config.services) {
       if (Array.isArray(config.services.autoStart)) {
         validated.services.autoStart = config.services.autoStart.filter(
-          (service: any) => typeof service === 'string'
+          (service: any) => typeof service === 'string',
         );
       } else {
         logger.warn('Invalid autoStart configuration, using empty array');
@@ -144,7 +144,7 @@ export class ConfigValidator {
   private static checkRequiredConfig(config: Config) {
     // Check AI configuration
     const aiConfig = config.ai;
-    
+
     // Check AI API key (if using providers that require API key)
     const providersRequiringKey = ['openai', 'anthropic', 'deepseek', 'cohere'];
     if (providersRequiringKey.includes(aiConfig.provider) && !aiConfig.apiKey) {
@@ -195,7 +195,7 @@ export class ConfigValidator {
     const merged = {
       ai: { ...defaultConfig.ai, ...(userConfig.ai || {}) },
       registry: { ...defaultConfig.registry, ...(userConfig.registry || {}) },
-      services: { ...defaultConfig.services, ...(userConfig.services || {}) }
+      services: { ...defaultConfig.services, ...(userConfig.services || {}) },
     };
     return this.validate(merged);
   }
@@ -205,9 +205,9 @@ export class ConfigValidator {
     const mockConfig = {
       ai: aiConfig,
       registry: { preferred: 'gitee-mcp' },
-      services: { autoStart: [] }
+      services: { autoStart: [] },
     };
-    
+
     const validated = this.validate(mockConfig);
     return validated.ai;
   }

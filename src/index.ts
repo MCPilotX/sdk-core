@@ -33,13 +33,36 @@ export { ConfigManager } from './core/config-manager';
 export { SimpleAI } from './ai/ai';
 
 // Export MCP functionality
-export { MCPClient, ToolRegistry, createMCPConfig } from './mcp';
+export {
+  MCPClient,
+  ToolRegistry,
+  createMCPConfig,
+  TOOL_CATEGORIES,
+  TOOL_PATTERNS,
+  discoverLocalMCPServers,
+  loadMCPServersFromEnv,
+} from './mcp';
+export { BaseTransport, StdioTransport, HTTPTransport, SSETransport, TransportFactory } from './mcp/transport';
+export { MCP_METHODS, MCP_ERROR_CODES } from './mcp/types';
 export type {
   Tool,
   ToolCall,
   ToolResult,
   MCPClientConfig,
   TransportConfig,
+  StdioLogFilterConfig,
+  TransportType,
+  MCPError,
+  JSONRPCRequest,
+  JSONRPCResponse,
+  Resource,
+  ResourceList,
+  ResourceContents,
+  Prompt,
+  PromptList,
+  MCPSession,
+  MCPEvent,
+  MCPEventType,
 } from './mcp/types';
 
 // Export utility functions

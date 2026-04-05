@@ -26,7 +26,7 @@ export const DEFAULT_CONFIG = {
     useLocalEmbeddings: false, // Whether to use local transformers for text embedding
     useVectorSearch: true, // Whether to use vector search
     transformersTimeout: 5000, // Transformers loading timeout (milliseconds)
-    fallbackMode: 'lightweight' // Fallback mode: 'lightweight' | 'simple' | 'disabled'
+    fallbackMode: 'lightweight', // Fallback mode: 'lightweight' | 'simple' | 'disabled'
   },
   registry: {
     preferred: 'gitee-mcp',
@@ -34,5 +34,5 @@ export const DEFAULT_CONFIG = {
   services: {
     autoStart: ['filesystem'],
     defaultTimeout: 60000, // 60 second default timeout
-  }
+  },
 };

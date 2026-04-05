@@ -87,7 +87,7 @@ export interface DetectionResult {
   warning?: string;
 }
 
-export type AIProvider = 'openai' | 'anthropic' | 'deepseek' | 'cohere' | 'ollama' | 'local' | 'custom';
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'azure' | 'deepseek' | 'cohere' | 'ollama' | 'local' | 'custom' | 'none';
 
 export interface AIConfig {
   provider: AIProvider;
@@ -97,6 +97,9 @@ export interface AIConfig {
   timeout?: number;
   maxTokens?: number;
   temperature?: number;
+  // Azure-specific configuration
+  apiVersion?: string;
+  region?: string;
   // Embedding-specific configuration
   embeddingProvider?: string;
   embeddingApiKey?: string;
@@ -134,25 +137,25 @@ export interface Config {
 export interface ServiceConfig {
   name: string;
   path: string;
-  
+
   // Runtime configuration (multi-level priority)
   runtime?: RuntimeType;                    // User explicitly specified (highest priority)
   detectedRuntime?: RuntimeType;           // Auto-detection result
   detectionConfidence?: number;            // Detection confidence (0-1)
   detectionSource?: 'legacy' | 'enhanced' | 'explicit';
   detectionEvidence?: DetectionEvidence;
-  
+
   // Runtime specific configuration
   runtimeConfig?: RuntimeSpecificConfig;
-  
+
   // Docker specific configuration
   dockerHost?: string;                     // Referenced Docker host configuration
-  
+
   // Backward compatibility fields
   entry?: string;
   args?: string[];
   env?: Record<string, string>;
-  
+
   // Docker-specific properties (for backward compatibility)
   image?: string;
   ports?: number[];
@@ -160,15 +163,15 @@ export interface ServiceConfig {
   workdir?: string;
   dockerfile?: string;
   buildContext?: string;
-  
+
   // Go-specific properties
   build?: boolean;
   output?: string;
   binary?: string;
-  
-  // Python-specific properties  
+
+  // Python-specific properties
   trim?: boolean;
-  
+
   // Metadata
   installedAt?: string;
   lastDetectedAt?: string;

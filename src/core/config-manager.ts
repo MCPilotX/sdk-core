@@ -1,13 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CONFIG_PATH, MCPILOT_HOME, DEFAULT_CONFIG } from './constants';
-import { 
-  ServiceConfig, 
-  RuntimeType, 
+import {
+  ServiceConfig,
+  RuntimeType,
   RuntimeSpecificConfig,
   DockerConnectionConfig,
   DetectionResult,
-  Config
+  Config,
 } from './types';
 import { logger } from './logger';
 
@@ -17,7 +17,7 @@ export class ConfigManager {
   private static DOCKER_HOSTS_DIR = path.join(this.CONFIG_DIR, 'config', 'docker-hosts');
   private static RUNTIME_PROFILES_DIR = path.join(this.CONFIG_DIR, 'config', 'runtime-profiles');
   private static GLOBAL_CONFIG_PATH = CONFIG_PATH;
-  
+
   // Memory caches
   private static serviceConfigCache = new Map<string, ServiceConfig>();
   private static servicesListCache: string[] | null = null;
@@ -32,7 +32,7 @@ export class ConfigManager {
       path.join(this.CONFIG_DIR, 'config'),
       this.SERVICES_DIR,
       this.DOCKER_HOSTS_DIR,
-      this.RUNTIME_PROFILES_DIR
+      this.RUNTIME_PROFILES_DIR,
     ];
 
     for (const dir of dirs) {
@@ -48,7 +48,7 @@ export class ConfigManager {
 
     // Create default Docker host configuration
     this.ensureDefaultDockerHosts();
-    
+
     // Create default runtime configuration templates
     this.ensureDefaultRuntimeProfiles();
 
@@ -62,9 +62,9 @@ export class ConfigManager {
     if (this.serviceConfigCache.has(serviceName)) {
       return this.serviceConfigCache.get(serviceName)!;
     }
-    
+
     const configPath = this.getServiceConfigPath(serviceName);
-    
+
     if (!fs.existsSync(configPath)) {
       return null;
     }
@@ -72,7 +72,7 @@ export class ConfigManager {
     try {
       const content = fs.readFileSync(configPath, 'utf-8');
       const config = JSON.parse(content);
-      
+
       // Cache the result
       this.serviceConfigCache.set(serviceName, config);
       return config;
@@ -85,7 +85,7 @@ export class ConfigManager {
   static saveServiceConfig(serviceName: string, config: ServiceConfig): void {
     const configPath = this.getServiceConfigPath(serviceName);
     const configDir = path.dirname(configPath);
-    
+
     if (!fs.existsSync(configDir)) {
       fs.mkdirSync(configDir, { recursive: true });
     }
@@ -101,11 +101,11 @@ export class ConfigManager {
       config.lastDetectedAt = new Date().toISOString();
 
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-      
+
       // Update cache
       this.serviceConfigCache.set(serviceName, config);
       this.servicesListCache = null; // Invalidate services list cache
-      
+
       logger.debug(`Service config saved: ${serviceName}`);
     } catch (error: any) {
       logger.error(`Failed to save service config for ${serviceName}: ${error.message}`);
@@ -114,12 +114,12 @@ export class ConfigManager {
   }
 
   static updateServiceDetection(
-    serviceName: string, 
-    detection: DetectionResult
+    serviceName: string,
+    detection: DetectionResult,
   ): ServiceConfig {
     const config = this.getServiceConfig(serviceName) || {
       name: serviceName,
-      path: '' // Will be set by caller
+      path: '', // Will be set by caller
     };
 
     config.detectedRuntime = detection.runtime;
@@ -141,9 +141,9 @@ export class ConfigManager {
   }
 
   static setServiceRuntime(
-    serviceName: string, 
-    runtime: RuntimeType, 
-    runtimeConfig?: RuntimeSpecificConfig
+    serviceName: string,
+    runtime: RuntimeType,
+    runtimeConfig?: RuntimeSpecificConfig,
   ): ServiceConfig {
     const config = this.getServiceConfig(serviceName);
     if (!config) {
@@ -153,7 +153,7 @@ export class ConfigManager {
     config.runtime = runtime;
     config.detectionSource = 'explicit';
     config.detectionConfidence = 1.0;
-    
+
     if (runtimeConfig) {
       config.runtimeConfig = runtimeConfig;
     }
@@ -166,7 +166,7 @@ export class ConfigManager {
 
   static getDockerHostConfig(hostName: string): DockerConnectionConfig | null {
     const configPath = path.join(this.DOCKER_HOSTS_DIR, `${hostName}.json`);
-    
+
     if (!fs.existsSync(configPath)) {
       return null;
     }
@@ -182,7 +182,7 @@ export class ConfigManager {
 
   static saveDockerHostConfig(hostName: string, config: DockerConnectionConfig): void {
     const configPath = path.join(this.DOCKER_HOSTS_DIR, `${hostName}.json`);
-    
+
     try {
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
       logger.debug(`Docker host config saved: ${hostName}`);
@@ -194,7 +194,7 @@ export class ConfigManager {
 
   static deleteDockerHostConfig(hostName: string): void {
     const configPath = path.join(this.DOCKER_HOSTS_DIR, `${hostName}.json`);
-    
+
     try {
       if (fs.existsSync(configPath)) {
         fs.unlinkSync(configPath);
@@ -220,7 +220,7 @@ export class ConfigManager {
 
   static getRuntimeProfile(runtime: RuntimeType): RuntimeSpecificConfig | null {
     const profilePath = path.join(this.RUNTIME_PROFILES_DIR, `${runtime}.json`);
-    
+
     if (!fs.existsSync(profilePath)) {
       return null;
     }
@@ -236,7 +236,7 @@ export class ConfigManager {
 
   static saveRuntimeProfile(runtime: RuntimeType, config: RuntimeSpecificConfig): void {
     const profilePath = path.join(this.RUNTIME_PROFILES_DIR, `${runtime}.json`);
-    
+
     try {
       fs.writeFileSync(profilePath, JSON.stringify(config, null, 2));
       logger.debug(`Runtime profile saved: ${runtime}`);
@@ -282,21 +282,21 @@ export class ConfigManager {
     const defaultHosts = {
       local: {
         type: 'local' as const,
-        socketPath: process.platform === 'win32' 
-          ? '//./pipe/docker_engine' 
-          : '/var/run/docker.sock'
+        socketPath: process.platform === 'win32'
+          ? '//./pipe/docker_engine'
+          : '/var/run/docker.sock',
       },
       'localhost-tcp': {
         type: 'remote' as const,
         host: 'localhost',
-        port: 2375
+        port: 2375,
       },
       'localhost-tls': {
         type: 'remote' as const,
         host: 'localhost',
         port: 2376,
-        useTLS: true
-      }
+        useTLS: true,
+      },
     };
 
     for (const [name, config] of Object.entries(defaultHosts)) {
@@ -313,37 +313,37 @@ export class ConfigManager {
         node: {
           npmRegistry: 'https://registry.npmmirror.com',
           bun: false,
-          nodeVersion: '>=18.0.0'
-        }
+          nodeVersion: '>=18.0.0',
+        },
       },
       python: {
         python: {
           venv: true,
           mirror: 'https://pypi.tuna.tsinghua.edu.cn/simple',
-          pythonVersion: '>=3.8'
-        }
+          pythonVersion: '>=3.8',
+        },
       },
       docker: {
         docker: {
           type: 'local' as const,
-          ports: [8080]
-        }
+          ports: [8080],
+        },
       },
       go: {
         go: {
           build: true,
-          goVersion: '>=1.20'
-        }
+          goVersion: '>=1.20',
+        },
       },
       rust: {
         rust: {
           release: true,
-          rustVersion: '>=1.70'
-        }
+          rustVersion: '>=1.70',
+        },
       },
       binary: {
         // Binary runtime has no special configuration
-      }
+      },
     };
 
     for (const [runtime, config] of Object.entries(defaultProfiles)) {
@@ -362,7 +362,7 @@ export class ConfigManager {
       requireExplicitRuntime: false,
       autoSaveDetection: true,
       interactiveMode: true,
-      logLevel: 'info'
+      logLevel: 'info',
     };
   }
 
@@ -370,11 +370,11 @@ export class ConfigManager {
 
   static resolveServiceConfig(
     userConfig: Partial<ServiceConfig>,
-    servicePath: string
+    servicePath: string,
   ): ServiceConfig {
     const baseConfig: ServiceConfig = {
       name: userConfig.name || path.basename(servicePath),
-      path: servicePath
+      path: servicePath,
     };
 
     // Merge user configuration
@@ -437,7 +437,7 @@ export class ConfigManager {
     if (this.servicesListCache !== null) {
       return this.servicesListCache;
     }
-    
+
     if (!fs.existsSync(this.SERVICES_DIR)) {
       this.servicesListCache = [];
       return [];
@@ -446,7 +446,7 @@ export class ConfigManager {
     const services = fs.readdirSync(this.SERVICES_DIR, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => dirent.name);
-    
+
     // Cache the result
     this.servicesListCache = services;
     return services;
@@ -454,7 +454,7 @@ export class ConfigManager {
 
   static getServiceDetectionCache(serviceName: string): DetectionResult | null {
     const cachePath = path.join(this.SERVICES_DIR, serviceName, 'detection-cache.json');
-    
+
     if (!fs.existsSync(cachePath)) {
       return null;
     }
@@ -471,7 +471,7 @@ export class ConfigManager {
   static saveServiceDetectionCache(serviceName: string, detection: DetectionResult): void {
     const cachePath = path.join(this.SERVICES_DIR, serviceName, 'detection-cache.json');
     const cacheDir = path.dirname(cachePath);
-    
+
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true });
     }

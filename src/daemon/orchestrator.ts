@@ -24,7 +24,7 @@ export class Orchestrator {
     if (this.config.ai?.enabled !== false) {
       // Use enhanced AI intent engine
       this.intentEngine = new EnhancedIntentEngine(this.config.ai);
-      
+
       logger.info('AI features enabled (vector database functionality removed)');
     } else {
       // AI disabled
@@ -45,7 +45,7 @@ export class Orchestrator {
       // 1. Get all available tools
       const availableServices = this.pm.getRunningServices();
       const availableTools: string[] = [];
-      
+
       for (const service of availableServices) {
         const tools = this.pm.getServiceTools(service);
         if (tools) {
@@ -57,7 +57,7 @@ export class Orchestrator {
 
       // 2. Use AI intent engine to parse user intent
       const toolCall = await this.intentEngine.parse(query, availableTools);
-      
+
       if (!toolCall) {
         throw new Error('Unable to determine which service to use for your request.');
       }
@@ -71,11 +71,11 @@ export class Orchestrator {
         success: true,
         service: toolCall.service,
         method: toolCall.method,
-        result: result
+        result: result,
       };
     } catch (error: any) {
       logger.error(`Query execution failed: ${error.message}`);
-      
+
       // No vector database fallback available
       throw new Error(`Query failed: ${error.message}. Vector database functionality has been removed.`);
     }
@@ -91,19 +91,19 @@ export class Orchestrator {
       // Validate new AI configuration
       const validatedConfig = ConfigValidator.validate({ ai: newAIConfig });
       this.config.ai = validatedConfig.ai;
-      
+
       // Update intent engine configuration if it exists
       if (this.intentEngine) {
         this.intentEngine.updateConfig(validatedConfig.ai);
       }
-      
+
       // Save to configuration file
       if (fs.existsSync(CONFIG_PATH)) {
         const currentConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
         currentConfig.ai = validatedConfig.ai;
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(currentConfig, null, 2));
       }
-      
+
       logger.info(`AI configuration updated to provider: ${validatedConfig.ai.provider}`);
       return { success: true, config: validatedConfig.ai };
     } catch (error: any) {

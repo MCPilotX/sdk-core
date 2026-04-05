@@ -98,12 +98,27 @@ export interface PromptList {
 
 export type TransportType = 'stdio' | 'http' | 'sse';
 
+export interface StdioLogFilterConfig {
+  // Log patterns to ignore (regex strings)
+  ignorePatterns?: string[];
+  // Log patterns to keep (even if they match ignore patterns)
+  keepPatterns?: string[];
+  // Whether to enable verbose logging
+  verbose?: boolean;
+  // Buffer size in bytes
+  bufferSize?: number;
+  // Message timeout in milliseconds
+  timeout?: number;
+}
+
 export interface TransportConfig {
   type: TransportType;
   command?: string; // For stdio
   args?: string[]; // For stdio
   url?: string; // For http/sse
   headers?: Record<string, string>; // For http/sse
+  // Log filter configuration specific to stdio transport
+  logFilter?: StdioLogFilterConfig;
 }
 
 // ==================== Client Configuration ====================
@@ -117,7 +132,7 @@ export interface MCPClientConfig {
 
 // ==================== Event Types ====================
 
-export type MCPEventType = 
+export type MCPEventType =
   | 'connected'
   | 'disconnected'
   | 'error'
@@ -150,20 +165,20 @@ export const MCP_METHODS = {
   // Tool related
   TOOLS_LIST: 'tools/list',
   TOOLS_CALL: 'tools/call',
-  
+
   // Resource related
   RESOURCES_LIST: 'resources/list',
   RESOURCES_READ: 'resources/read',
   RESOURCES_SUBSCRIBE: 'resources/subscribe',
   RESOURCES_UNSUBSCRIBE: 'resources/unsubscribe',
-  
+
   // Prompt related
   PROMPTS_LIST: 'prompts/list',
   PROMPTS_GET: 'prompts/get',
-  
+
   // Logging related
   LOGGING_SET_LEVEL: 'logging/setLevel',
-  
+
   // Notifications
   NOTIFICATIONS_LIST: 'notifications/list',
 } as const;

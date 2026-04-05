@@ -61,9 +61,9 @@ export class PerformanceMonitor {
         cpu: 80,
         memory: 80,
         responseTime: 1000,
-        errorRate: 5
+        errorRate: 5,
       },
-      ...config
+      ...config,
     };
 
     if (this.config.enabled) {
@@ -102,7 +102,7 @@ export class PerformanceMonitor {
         cpuUsage: this.getCpuUsage(),
         memoryUsage: this.getMemoryUsage(),
         systemMetrics: this.getSystemMetrics(),
-        serviceMetrics: this.getServiceMetrics()
+        serviceMetrics: this.getServiceMetrics(),
       };
 
       this.metrics.push(metrics);
@@ -117,7 +117,7 @@ export class PerformanceMonitor {
     return {
       user: usage.user / 1000, // microseconds to milliseconds
       system: usage.system / 1000,
-      total: (usage.user + usage.system) / 1000
+      total: (usage.user + usage.system) / 1000,
     };
   }
 
@@ -127,7 +127,7 @@ export class PerformanceMonitor {
       rss: memory.rss,
       heapTotal: memory.heapTotal,
       heapUsed: memory.heapUsed,
-      external: memory.external
+      external: memory.external,
     };
   }
 
@@ -136,13 +136,13 @@ export class PerformanceMonitor {
       totalMemory: os.totalmem(),
       freeMemory: os.freemem(),
       loadAverage: os.loadavg(),
-      uptime: os.uptime()
+      uptime: os.uptime(),
     };
   }
 
   private getServiceMetrics() {
     const serviceMetrics: any = {};
-    
+
     for (const [serviceName, stats] of this.serviceStats) {
       serviceMetrics[serviceName] = {
         cpu: stats.cpu || 0,
@@ -151,7 +151,7 @@ export class PerformanceMonitor {
         requestCount: stats.requestCount || 0,
         errorCount: stats.errorCount || 0,
         responseTime: stats.responseTime || 0,
-        errorRate: stats.errorRate || 0
+        errorRate: stats.errorRate || 0,
       };
     }
 
@@ -164,16 +164,16 @@ export class PerformanceMonitor {
   }
 
   private checkAlerts() {
-    if (this.metrics.length === 0) return;
+    if (this.metrics.length === 0) {return;}
 
     const latest = this.metrics[this.metrics.length - 1];
-    
+
     // Check CPU usage
     const cpuPercent = (latest.cpuUsage.total / 1000) * 100; // rough estimate
     if (cpuPercent > this.config.alertThresholds.cpu) {
       logger.warn(`High CPU usage detected: ${cpuPercent.toFixed(1)}%`, {
         threshold: this.config.alertThresholds.cpu,
-        metrics: latest.cpuUsage
+        metrics: latest.cpuUsage,
       });
     }
 
@@ -182,7 +182,7 @@ export class PerformanceMonitor {
     if (memoryPercent > this.config.alertThresholds.memory) {
       logger.warn(`High memory usage detected: ${memoryPercent.toFixed(1)}%`, {
         threshold: this.config.alertThresholds.memory,
-        metrics: latest.memoryUsage
+        metrics: latest.memoryUsage,
       });
     }
 
@@ -191,14 +191,14 @@ export class PerformanceMonitor {
       if (metrics.errorRate > this.config.alertThresholds.errorRate) {
         logger.warn(`High error rate for service ${serviceName}: ${metrics.errorRate.toFixed(1)}%`, {
           threshold: this.config.alertThresholds.errorRate,
-          metrics
+          metrics,
         });
       }
 
       if (metrics.responseTime > this.config.alertThresholds.responseTime) {
         logger.warn(`High response time for service ${serviceName}: ${metrics.responseTime}ms`, {
           threshold: this.config.alertThresholds.responseTime,
-          metrics
+          metrics,
         });
       }
     }
@@ -208,7 +208,7 @@ export class PerformanceMonitor {
     this.serviceStats.set(serviceName, {
       ...this.serviceStats.get(serviceName),
       ...stats,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     });
   }
 
@@ -217,11 +217,11 @@ export class PerformanceMonitor {
       requestCount: 0,
       errorCount: 0,
       totalResponseTime: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
 
     stats.requestCount++;
-    if (!success) stats.errorCount++;
+    if (!success) {stats.errorCount++;}
     stats.totalResponseTime += duration;
     stats.responseTime = stats.totalResponseTime / stats.requestCount;
     stats.errorRate = (stats.errorCount / stats.requestCount) * 100;
@@ -235,8 +235,8 @@ export class PerformanceMonitor {
       return [...this.metrics];
     }
 
-    return this.metrics.filter(m => 
-      m.timestamp >= timeRange.start && m.timestamp <= timeRange.end
+    return this.metrics.filter(m =>
+      m.timestamp >= timeRange.start && m.timestamp <= timeRange.end,
     );
   }
 
@@ -258,20 +258,20 @@ export class PerformanceMonitor {
       timeRange: {
         start: oldest.timestamp,
         end: latest.timestamp,
-        duration
+        duration,
       },
       averages: {
         cpuUsage: avgCpu,
         memoryUsage: avgMemory,
-        memoryPercent: avgMemoryPercent
+        memoryPercent: avgMemoryPercent,
       },
       current: {
         cpuUsage: latest.cpuUsage,
         memoryUsage: latest.memoryUsage,
-        systemMetrics: latest.systemMetrics
+        systemMetrics: latest.systemMetrics,
       },
       services: Object.keys(latest.serviceMetrics).length,
-      alerts: this.checkForAlertsInternal()
+      alerts: this.checkForAlertsInternal(),
     };
   }
 
@@ -279,7 +279,7 @@ export class PerformanceMonitor {
     const alerts: any[] = [];
     const latest = this.metrics[this.metrics.length - 1];
 
-    if (!latest) return alerts;
+    if (!latest) {return alerts;}
 
     // More complex alert logic can be added here
     return alerts;
@@ -297,7 +297,7 @@ export class PerformanceMonitor {
 
   updateConfig(newConfig: Partial<PerformanceConfig>) {
     this.config = { ...this.config, ...newConfig };
-    
+
     if (this.config.enabled && !this.collectionTimer) {
       this.start();
     } else if (!this.config.enabled && this.collectionTimer) {
@@ -331,19 +331,19 @@ export function stopPerformanceMonitoring() {
 }
 
 export function recordServicePerformance(
-  serviceName: string, 
-  operation: string, 
-  duration: number, 
-  success: boolean = true
+  serviceName: string,
+  operation: string,
+  duration: number,
+  success: boolean = true,
 ) {
   if (performanceMonitor) {
     performanceMonitor.recordServiceRequest(serviceName, duration, success);
-    
+
     logger.debug('Service performance recorded', {
       service: serviceName,
       operation,
       duration,
-      success
+      success,
     });
   }
 }

@@ -37,13 +37,13 @@ export class ServiceManager {
     for (const service of serviceInstances) {
       this.services.set(service.name, {
         ...service,
-        status: service.status || 'installed'
+        status: service.status || 'installed',
       });
     }
   }
 
   private saveServices() {
-    const config = fs.existsSync(CONFIG_PATH) 
+    const config = fs.existsSync(CONFIG_PATH)
       ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'))
       : { services: {} };
 
@@ -58,18 +58,18 @@ export class ServiceManager {
     }
 
     const serviceName = name || path.basename(resolvedPath);
-    
-    // 检查服务是否已安装
+
+    // Check if service is already installed
     if (this.services.has(serviceName)) {
       throw new Error(`Service ${serviceName} is already installed`);
     }
 
-    // 创建服务配置
+    // Create service configuration
     const serviceConfig: ServiceConfig = {
       name: serviceName,
       path: resolvedPath,
-      runtime: 'node', // 默认，实际应该通过检测器获取
-      entry: this.detectEntryPoint(resolvedPath)
+      runtime: 'node', // Default, should actually be obtained from detector
+      entry: this.detectEntryPoint(resolvedPath),
     };
 
     const serviceInfo: ServiceInfo = {
@@ -78,7 +78,7 @@ export class ServiceManager {
       runtime: serviceConfig.runtime,
       status: 'installed',
       installedAt: new Date().toISOString(),
-      config: serviceConfig
+      config: serviceConfig,
     };
 
     this.services.set(serviceName, serviceInfo);
@@ -100,7 +100,7 @@ export class ServiceManager {
     }
 
     try {
-      // 创建日志目录
+      // Create log directory
       const logDir = path.join(LOGS_DIR, name);
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
@@ -112,7 +112,7 @@ export class ServiceManager {
       const stdout = fs.openSync(stdoutLog, 'a');
       const stderr = fs.openSync(stderrLog, 'a');
 
-      // 根据运行时启动服务
+      // Start service based on runtime
       const process = this.spawnService(service);
 
       process.stdout?.pipe(fs.createWriteStream(stdoutLog, { flags: 'a' }));
@@ -120,7 +120,7 @@ export class ServiceManager {
 
       this.processes.set(name, process);
 
-      // 更新服务状态
+      // Update service status
       service.status = 'running';
       service.startedAt = new Date().toISOString();
       service.stoppedAt = undefined;
@@ -166,7 +166,7 @@ export class ServiceManager {
 
   async restartService(name: string): Promise<ServiceInfo> {
     await this.stopService(name);
-    // 等待一段时间确保进程完全停止
+    // Wait for a while to ensure process is completely stopped
     await new Promise(resolve => setTimeout(resolve, 1000));
     return await this.startService(name);
   }
@@ -177,12 +177,12 @@ export class ServiceManager {
       throw new Error(`Service ${name} is not installed`);
     }
 
-    // 如果服务正在运行，先停止
+    // If service is running, stop it first
     if (service.status === 'running') {
       await this.stopService(name);
     }
 
-    // 从配置中移除
+    // Remove from configuration
     this.services.delete(name);
     this.saveServices();
 
@@ -225,7 +225,7 @@ export class ServiceManager {
     }
 
     const process = this.processes.get(name);
-    
+
     return {
       name: service.name,
       status: service.status,
@@ -236,9 +236,9 @@ export class ServiceManager {
       stoppedAt: service.stoppedAt,
       isProcessAlive: process ? !process.exitCode : false,
       memoryUsage: this.getProcessMemoryUsage(process),
-      uptime: service.startedAt 
+      uptime: service.startedAt
         ? Date.now() - new Date(service.startedAt).getTime()
-        : 0
+        : 0,
     };
   }
 
@@ -261,7 +261,7 @@ export class ServiceManager {
       case 'docker':
         command = 'docker';
         args = ['run', '-d', '--rm', '--name', `mcp-${service.name}`, config.image || service.name];
-        if (config.args) args.push(...config.args);
+        if (config.args) {args.push(...config.args);}
         break;
       default:
         command = config.entry;
@@ -274,10 +274,10 @@ export class ServiceManager {
       cwd,
       env: {
         ...process.env,
-        ...config.env
+        ...config.env,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
-      detached: false
+      detached: false,
     });
   }
 
@@ -287,7 +287,7 @@ export class ServiceManager {
       'index.ts', 'main.ts', 'app.ts', 'server.ts',
       'main.py', 'app.py', 'server.py',
       'main.go', 'server.go',
-      'main.rs', 'lib.rs'
+      'main.rs', 'lib.rs',
     ];
 
     for (const entry of possibleEntries) {
@@ -297,11 +297,11 @@ export class ServiceManager {
       }
     }
 
-    // 如果没有找到标准入口点，返回第一个文件
+    // If no standard entry point found, return the first file
     const files = fs.readdirSync(servicePath);
-    const firstFile = files.find(f => 
-      f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.py') || 
-      f.endsWith('.go') || f.endsWith('.rs')
+    const firstFile = files.find(f =>
+      f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.py') ||
+      f.endsWith('.go') || f.endsWith('.rs'),
     );
 
     return firstFile || 'index.js';
@@ -313,8 +313,8 @@ export class ServiceManager {
     }
 
     try {
-      // 这是一个简化的实现，实际应该使用系统特定的方法
-      // 例如在Linux上读取/proc/[pid]/status
+      // This is a simplified implementation, should actually use system-specific methods
+      // For example, reading /proc/[pid]/status on Linux
       return 0;
     } catch {
       return undefined;
@@ -332,13 +332,13 @@ export class ServiceManager {
       return false;
     }
 
-    // 这里可以添加更复杂的健康检查逻辑
-    // 例如检查HTTP端点、TCP端口等
+    // More complex health check logic can be added here
+    // For example, checking HTTP endpoints, TCP ports, etc.
     return true;
   }
 
   async cleanup(): Promise<void> {
-    // 停止所有运行的服务
+    // Stop all running services
     for (const [name, service] of this.services) {
       if (service.status === 'running') {
         await this.stopService(name);

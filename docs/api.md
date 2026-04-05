@@ -1,14 +1,14 @@
-# API 参考
+# API Reference
 
-## 概述
+## Overview
 
-MCPilot SDK Core 提供了一个简洁、优雅的 API 用于 MCP（Model Context Protocol）服务编排。本文档详细介绍了 SDK 的所有公共 API。
+MCPilot SDK Core provides a concise and elegant API for MCP (Model Context Protocol) service orchestration. This document details all public APIs of the SDK.
 
-## 核心类
+## Core Classes
 
 ### `MCPilotSDK`
 
-主 SDK 类，提供所有功能。
+The main SDK class that provides all functionality.
 
 ```typescript
 import { MCPilotSDK } from '@mcpilotx/sdk-core';
@@ -16,37 +16,37 @@ import { MCPilotSDK } from '@mcpilotx/sdk-core';
 const sdk = new MCPilotSDK(options);
 ```
 
-#### 构造函数选项
+#### Constructor Options
 
 ```typescript
 interface SDKOptions {
-  // 配置文件路径，默认为 ~/.mcpilot/config.json
+  // Configuration file path, defaults to ~/.mcpilot/config.json
   configPath?: string;
   
-  // 是否自动初始化 SDK，默认为 true
+  // Whether to auto-initialize the SDK, defaults to true
   autoInit?: boolean;
   
-  // 自定义日志记录器
+  // Custom logger
   logger?: {
     info: (message: string) => void;
     error: (message: string) => void;
     debug: (message: string) => void;
   };
   
-  // MCP 相关配置
+  // MCP related configuration
   mcp?: {
-    // 是否自动发现本地 MCP 服务器，默认为 false
+    // Whether to auto-discover local MCP servers, defaults to false
     autoDiscover?: boolean;
     
-    // MCP 服务器配置数组
+    // Array of MCP server configurations
     servers?: MCPClientConfig[];
   };
 }
 ```
 
-#### 单例实例
+#### Singleton Instance
 
-SDK 还提供了一个预初始化的单例实例：
+The SDK also provides a pre-initialized singleton instance:
 
 ```typescript
 import { mcpilot } from '@mcpilotx/sdk-core';

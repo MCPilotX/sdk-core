@@ -23,7 +23,7 @@ export class NodeAdapter {
       // Auto-detect: try bun first, fallback to node
       try {
         execSync('which bun', { stdio: 'ignore' });
-        // 进一步验证 bun 是否可执行
+        // Further verify that bun is executable
         execSync('bun --version', { stdio: 'ignore' });
         this.runtime = 'bun';
       } catch {
@@ -71,14 +71,14 @@ export class NodeAdapter {
 
   // Send MCP JSON-RPC request
   async call(method: string, params: any = {}): Promise<any> {
-    if (!this.process) throw new Error(`Service ${this.options.name} is not running.`);
+    if (!this.process) {throw new Error(`Service ${this.options.name} is not running.`);}
 
     const id = ++this.requestId;
     const request = {
       jsonrpc: '2.0',
       id,
       method,
-      params
+      params,
     };
 
     return new Promise((resolve) => {

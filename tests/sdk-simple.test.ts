@@ -2,11 +2,13 @@ import { MCPilotSDK, mcpilot } from '../src/sdk';
 import { EnhancedRuntimeDetector } from '../src/runtime/detector-advanced';
 import { ConfigManager } from '../src/core/config-manager';
 import { RuntimeAdapterRegistry } from '../src/runtime/adapter-advanced';
+import { SimpleAI } from '../src/ai/ai';
 
 // Mock dependencies
 jest.mock('../src/runtime/detector-advanced');
 jest.mock('../src/core/config-manager');
 jest.mock('../src/runtime/adapter-advanced');
+jest.mock('../src/ai/ai');
 
 describe('MCPilotSDK (Simple Version)', () => {
   let sdk: MCPilotSDK;
@@ -49,6 +51,19 @@ describe('MCPilotSDK (Simple Version)', () => {
       status: jest.fn().mockResolvedValue({ running: true, pid: 12345, uptime: 3600 }),
     };
     (RuntimeAdapterRegistry.createAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+    // Mock SimpleAI
+    const mockSimpleAI = {
+      configure: jest.fn().mockResolvedValue(undefined),
+      ask: jest.fn().mockImplementation((query: string) => {
+        return Promise.resolve({
+          type: 'suggestions',
+          message: `I received your query: "${query}"`,
+          confidence: 0.8
+        });
+      })
+    };
+    (SimpleAI as unknown as jest.Mock).mockImplementation(() => mockSimpleAI);
 
     // Create SDK instance
     sdk = new MCPilotSDK({
@@ -243,6 +258,15 @@ describe('MCPilotSDK (Simple Version)', () => {
   describe('ask()', () => {
     beforeEach(() => {
       sdk.init();
+      // Configure AI before testing ask()
+      // Mock getGlobalConfig to return a valid config for configureAI
+      (ConfigManager.getGlobalConfig as jest.Mock).mockReturnValueOnce({
+        ai: { provider: 'openai', apiKey: 'test-key' }
+      });
+      sdk.configureAI({
+        provider: 'openai',
+        apiKey: 'test-key'
+      });
     });
 
     it('should return AI response', async () => {
@@ -250,13 +274,14 @@ describe('MCPilotSDK (Simple Version)', () => {
 
       expect(result).toEqual({
         answer: expect.stringContaining('I received your query: "Hello, how are you?"'),
-        confidence: 0.8,
+        confidence: 0.3, // SDK sets confidence to 0.3 for 'suggestions' type
       });
     });
 
     it('should handle errors during AI query', async () => {
-      // Force an error by making ConfigManager.getGlobalConfig throw
-      (ConfigManager.getGlobalConfig as jest.Mock).mockImplementationOnce(() => {
+      // Force an error by making SimpleAI.ask throw
+      const mockSimpleAIInstance = (SimpleAI as unknown as jest.Mock).mock.results[0].value;
+      mockSimpleAIInstance.ask.mockImplementationOnce(() => {
         throw new Error('Config error');
       });
 

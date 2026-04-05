@@ -13,15 +13,15 @@ import { SimpleAIConfigManager } from './config';
 export class SimpleAICommand {
   private ai: SimpleAI;
   private configManager: SimpleAIConfigManager;
-  
+
   constructor() {
     this.ai = new SimpleAI();
     this.configManager = new SimpleAIConfigManager();
-    
+
     // Load configuration
     this.loadConfiguration();
   }
-  
+
   /**
    * Load configuration from manager
    */
@@ -35,7 +35,7 @@ export class SimpleAICommand {
       console.warn(`Failed to load AI configuration: ${error.message}`);
     }
   }
-  
+
   /**
    * Handle AI command
    */
@@ -45,38 +45,38 @@ export class SimpleAICommand {
       await this.showStatus();
       return;
     }
-    
+
     switch (action.toLowerCase()) {
       case 'configure':
         await this.handleConfigure(args);
         break;
-        
+
       case 'test':
         await this.handleTest();
         break;
-        
+
       case 'ask':
         await this.handleAsk(args.join(' '));
         break;
-        
+
       case 'status':
         await this.showStatus();
         break;
-        
+
       case 'reset':
         await this.handleReset();
         break;
-        
+
       case 'help':
         this.showHelp();
         break;
-        
+
       default:
         console.log(chalk.red(`Unknown action: ${action}`));
         this.showHelp();
     }
   }
-  
+
   /**
    * Handle configure command
    */
@@ -84,15 +84,15 @@ export class SimpleAICommand {
     try {
       // Parse configuration from arguments
       const config = this.configManager.parseFromArgs(args);
-      
+
       // Update configuration
       await this.configManager.updateConfig(config);
-      
+
       // Configure AI service
       if (config.provider !== 'none') {
         await this.ai.configure(config);
         console.log(chalk.green(`✅ AI configured with provider: ${config.provider}`));
-        
+
         if (config.provider === 'ollama') {
           console.log(chalk.blue('💡 Make sure Ollama service is running: ollama serve'));
         }
@@ -100,10 +100,10 @@ export class SimpleAICommand {
         this.ai.reset();
         console.log(chalk.yellow('⚠️ AI configuration reset'));
       }
-      
+
     } catch (error: any) {
       console.log(chalk.red(`❌ Configuration failed: ${error.message}`));
-      
+
       if (error.message.includes('OpenAI requires API key')) {
         console.log(chalk.yellow('\n🔧 How to get OpenAI API key:'));
         console.log('  1. Visit: https://platform.openai.com/api-keys');
@@ -112,30 +112,30 @@ export class SimpleAICommand {
       }
     }
   }
-  
+
   /**
    * Handle test command
    */
   private async handleTest(): Promise<void> {
     const status = this.ai.getStatus();
-    
+
     if (!status.configured) {
       console.log(chalk.yellow('⚠️ AI not configured'));
       console.log('Run: mcp ai configure openai YOUR_API_KEY');
       console.log('Or: mcp ai configure ollama');
       return;
     }
-    
+
     console.log(chalk.blue('🔌 Testing AI connection...'));
-    
+
     try {
       const result = await this.ai.testConnection();
-      
+
       if (result.success) {
         console.log(chalk.green(`✅ ${result.message}`));
       } else {
         console.log(chalk.red(`❌ ${result.message}`));
-        
+
         // Provide suggestions based on provider
         const config = this.configManager.getConfig();
         if (config.provider === 'openai') {
@@ -150,12 +150,12 @@ export class SimpleAICommand {
           console.log('  3. Check if endpoint is correct: http://localhost:11434');
         }
       }
-      
+
     } catch (error: any) {
       console.log(chalk.red(`❌ Test failed: ${error.message}`));
     }
   }
-  
+
   /**
    * Handle ask command
    */
@@ -165,13 +165,13 @@ export class SimpleAICommand {
       console.log('Example: mcp ai ask "list files in current directory"');
       return;
     }
-    
+
     console.log(chalk.blue(`🤖 Query: "${query}"`));
-    
+
     try {
       const result = await this.ai.ask(query);
       await this.handleAskResult(result);
-      
+
     } catch (error: any) {
       if (error instanceof AIError) {
         console.log(SimpleAI.getFriendlyError(error));
@@ -180,7 +180,7 @@ export class SimpleAICommand {
       }
     }
   }
-  
+
   /**
    * Handle ask result
    */
@@ -190,18 +190,18 @@ export class SimpleAICommand {
         console.log(chalk.green(`✅ Intent recognized (confidence: ${(result.confidence || 0) * 100}%)`));
         console.log(chalk.blue(`🔧 Tool call: ${result.tool?.service}.${result.tool?.tool}`));
         console.log(chalk.gray(`   Parameters: ${JSON.stringify(result.tool?.params)}`));
-        
+
         // In actual implementation, this would execute the tool call
         console.log(chalk.yellow('\n💡 Note: Tool execution would happen here'));
         console.log('   In production, this would call the actual MCP service');
         break;
-        
+
       case 'suggestions':
         console.log(chalk.yellow(`⚠️ ${result.message}`));
         if (result.help) {
           console.log(chalk.blue(result.help));
         }
-        
+
         if (result.suggestions && result.suggestions.length > 0) {
           console.log(chalk.green('\n🔧 Suggested commands:'));
           result.suggestions.forEach((suggestion, i) => {
@@ -209,13 +209,13 @@ export class SimpleAICommand {
           });
         }
         break;
-        
+
       case 'error':
         console.log(chalk.red(`❌ ${result.message}`));
         break;
     }
   }
-  
+
   /**
    * Handle reset command
    */
@@ -224,23 +224,23 @@ export class SimpleAICommand {
     this.ai.reset();
     console.log(chalk.green('✅ AI configuration reset to defaults'));
   }
-  
+
   /**
    * Show AI status
    */
   private async showStatus(): Promise<void> {
     const aiStatus = this.ai.getStatus();
     const configStatus = this.configManager.getStatus();
-    
+
     console.log(chalk.blue('🤖 AI Status:'));
     console.log(`  Enabled: ${aiStatus.enabled ? chalk.green('Yes') : chalk.red('No')}`);
     console.log(`  Provider: ${chalk.cyan(aiStatus.provider)}`);
     console.log(`  Configured: ${configStatus.configured ? chalk.green('Yes') : chalk.yellow('No')}`);
-    
+
     if (configStatus.configured) {
       const config = this.configManager.getConfig();
       console.log(`  Config file: ${chalk.gray(configStatus.configFile)}`);
-      
+
       if (config.provider !== 'none') {
         console.log(chalk.blue('\n🔧 Current configuration:'));
         console.log(this.configManager.formatConfig());
@@ -250,7 +250,7 @@ export class SimpleAICommand {
       console.log('   To configure: mcp ai configure openai YOUR_API_KEY');
       console.log('   Or use Ollama: mcp ai configure ollama');
     }
-    
+
     // Show test result if configured
     if (aiStatus.configured) {
       console.log(chalk.blue('\n🔌 Connection test:'));
@@ -264,7 +264,7 @@ export class SimpleAICommand {
       }
     }
   }
-  
+
   /**
    * Show help
    */
@@ -301,14 +301,14 @@ export class SimpleAICommand {
     console.log('  Ask question:    mcp ai ask "start http service"');
     console.log('  Test connection: mcp ai test');
   }
-  
+
   /**
    * Get AI instance (for integration with other modules)
    */
   getAIInstance(): SimpleAI {
     return this.ai;
   }
-  
+
   /**
    * Get config manager instance
    */

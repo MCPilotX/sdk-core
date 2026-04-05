@@ -30,10 +30,10 @@ export function createMCPConfig(
     autoConnect?: boolean;
     timeout?: number;
     maxRetries?: number;
-  }
+  },
 ) {
   const { command, args, url, headers, ...clientOptions } = options;
-  
+
   return {
     transport: {
       type: transportType,
@@ -75,7 +75,7 @@ export const TOOL_PATTERNS = {
       required: ['path'],
     },
   },
-  
+
   WRITE_FILE: {
     name: 'write_file',
     description: 'Write file content',
@@ -89,7 +89,7 @@ export const TOOL_PATTERNS = {
       required: ['path', 'content'],
     },
   },
-  
+
   // Network tools
   HTTP_REQUEST: {
     name: 'http_request',
@@ -105,7 +105,7 @@ export const TOOL_PATTERNS = {
       required: ['url'],
     },
   },
-  
+
   // System tools
   EXECUTE_COMMAND: {
     name: 'execute_command',
@@ -133,7 +133,7 @@ export async function discoverLocalMCPServers(): Promise<Array<{
   transport: any;
 }>> {
   const servers = [];
-  
+
   // Predefined common MCP servers
   const commonServers = [
     // Filesystem server
@@ -155,7 +155,7 @@ export async function discoverLocalMCPServers(): Promise<Array<{
       args: ['@modelcontextprotocol/server-github'],
     },
   ];
-  
+
   for (const server of commonServers) {
     servers.push({
       name: server.name,
@@ -166,7 +166,7 @@ export async function discoverLocalMCPServers(): Promise<Array<{
       },
     });
   }
-  
+
   return servers;
 }
 
@@ -178,28 +178,28 @@ export function loadMCPServersFromEnv(): Array<{
   transport: any;
 }> {
   const servers = [];
-  
+
   // Read MCP server configurations from environment variables
   // Format: MCP_SERVER_<NAME>_TYPE=stdio|http|sse
   //         MCP_SERVER_<NAME>_COMMAND=command (for stdio)
   //         MCP_SERVER_<NAME>_URL=url (for http/sse)
-  
+
   const envPrefix = 'MCP_SERVER_';
-  
+
   Object.keys(process.env).forEach(key => {
     if (key.startsWith(envPrefix) && key.endsWith('_TYPE')) {
       const serverName = key.slice(envPrefix.length, -5).toLowerCase();
       const transportType = process.env[key] as 'stdio' | 'http' | 'sse';
-      
-      let transport: any = { type: transportType };
-      
+
+      const transport: any = { type: transportType };
+
       if (transportType === 'stdio') {
         const commandKey = `${envPrefix}${serverName.toUpperCase()}_COMMAND`;
         const argsKey = `${envPrefix}${serverName.toUpperCase()}_ARGS`;
-        
+
         if (process.env[commandKey]) {
           transport.command = process.env[commandKey];
-          
+
           if (process.env[argsKey]) {
             try {
               transport.args = JSON.parse(process.env[argsKey]!);
@@ -211,10 +211,10 @@ export function loadMCPServersFromEnv(): Array<{
       } else if (transportType === 'http' || transportType === 'sse') {
         const urlKey = `${envPrefix}${serverName.toUpperCase()}_URL`;
         const headersKey = `${envPrefix}${serverName.toUpperCase()}_HEADERS`;
-        
+
         if (process.env[urlKey]) {
           transport.url = process.env[urlKey];
-          
+
           if (process.env[headersKey]) {
             try {
               transport.headers = JSON.parse(process.env[headersKey]!);
@@ -224,14 +224,14 @@ export function loadMCPServersFromEnv(): Array<{
           }
         }
       }
-      
+
       servers.push({
         name: serverName,
         transport,
       });
     }
   });
-  
+
   return servers;
 }
 

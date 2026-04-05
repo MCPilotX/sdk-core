@@ -24,17 +24,17 @@ export async function checkAICapabilities(config?: any): Promise<{
 }> {
   // Check if AI is configured
   const aiConfig = config || {};
-  
+
   if (aiConfig.provider && aiConfig.provider !== 'none') {
     return {
       aiAvailable: true,
-      mode: 'api'
+      mode: 'api',
     };
   }
-  
+
   return {
     aiAvailable: false,
-    mode: 'none'
+    mode: 'none',
   };
 }
 
@@ -43,11 +43,11 @@ export async function checkAICapabilities(config?: any): Promise<{
  */
 export async function getAIStatus(config?: any) {
   const capabilities = await checkAICapabilities(config);
-  
+
   return {
     ...capabilities,
     timestamp: new Date().toISOString(),
     version: '0.2.1',
-    note: 'Vector database functionality has been removed. Use external AI services for semantic search.'
+    note: 'Vector database functionality has been removed. Use external AI services for semantic search.',
   };
 }

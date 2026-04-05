@@ -19,7 +19,7 @@ export class Logger {
     if (!fs.existsSync(LOGS_DIR)) {
       fs.mkdirSync(LOGS_DIR, { recursive: true });
     }
-    
+
     // Create date-named log file
     const date = new Date().toISOString().split('T')[0];
     this.logFile = path.join(LOGS_DIR, `mcpilot-${date}.log`);
@@ -54,12 +54,12 @@ export class Logger {
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
       }
-      
+
       // Ensure log file exists
       if (!fs.existsSync(this.logFile)) {
         fs.writeFileSync(this.logFile, '', 'utf8');
       }
-      
+
       fs.appendFileSync(this.logFile, message + '\n', 'utf8');
     } catch (error: any) {
       // If file write fails, at least output to console

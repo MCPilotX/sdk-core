@@ -1,69 +1,61 @@
 # MCPilot SDK Core
 
-<div align="right">
-  <small>
-    <strong>Language:</strong>
-    <a href="README.md">English</a> |
-    <a href="docs/README.ZH_CN.md">中文</a>
-  </small>
-</div>
-
 [![npm version](https://img.shields.io/npm/v/@mcpilotx/sdk-core.svg)](https://www.npmjs.com/package/@mcpilotx/sdk-core)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-**The ultimate SDK for building AI-powered applications with MCP (Model Context Protocol) support.**
+**构建支持MCP（模型上下文协议）的AI驱动应用程序的终极SDK。**
 
-MCPilot SDK Core provides everything you need to integrate AI capabilities, MCP tool management, and intelligent runtime detection into your applications - with minimal configuration and maximum flexibility.
+MCPilot SDK Core 提供了集成AI能力、MCP工具管理和智能运行时检测所需的一切 - 配置最少，灵活性最大。
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Installation
+### 安装
 
 ```bash
 npm install @mcpilotx/sdk-core
-# or
+# 或
 yarn add @mcpilotx/sdk-core
-# or
+# 或
 pnpm add @mcpilotx/sdk-core
 ```
 
-### Basic Usage in 30 Seconds
+### 30秒基础使用
 
 ```typescript
 import { MCPilotSDK, createSDK } from '@mcpilotx/sdk-core';
 
-// Option 1: Use the singleton
+// 选项1：使用单例
 import { mcpilot } from '@mcpilotx/sdk-core';
 
-// Option 2: Create your own instance
+// 选项2：创建自己的实例
 const sdk = new MCPilotSDK();
-// or
+// 或
 const sdk = createSDK();
 
-// Start using AI immediately
-const response = await sdk.ask("What's the weather like today?");
-console.log(response); // AI response based on context
+// 立即开始使用AI
+const response = await sdk.ask("今天天气怎么样？");
+console.log(response); // 基于上下文的AI响应
 ```
 
-## ✨ Core Features
+## ✨ 核心功能
 
-### 🤖 **AI Integration Made Simple**
+### 🤖 **AI集成变得简单**
 ```typescript
-// Configure AI with your preferred provider
+// 使用您偏好的提供商配置AI
 await sdk.configureAI({
-  provider: 'openai', // or 'anthropic', 'google', 'azure'
+  provider: 'openai', // 或 'anthropic', 'google', 'azure'
   apiKey: process.env.OPENAI_API_KEY,
   model: 'gpt-4'
 });
 
-// Ask questions naturally
-const answer = await sdk.ask("Explain quantum computing in simple terms");
+// 自然地提问
+const answer = await sdk.ask("用简单的术语解释量子计算");
 ```
 
-### 🔧 **MCP Tool Management**
+### 🔧 **MCP工具管理**
 ```typescript
-// Connect to MCP servers
+// 连接到MCP服务器
 await sdk.connectMCPServer({
   transport: {
     type: 'stdio',
@@ -72,27 +64,27 @@ await sdk.connectMCPServer({
   }
 });
 
-// Use tools automatically
-const fileContent = await sdk.useTool('read_file', { path: 'README.md' });
+// 自动使用工具
+const fileContent = await sdk.executeTool('read_file', { path: 'README.md' });
 ```
 
-### 🧠 **Intelligent Runtime Detection**
+### 🧠 **智能运行时检测**
 ```typescript
-// Auto-detect project type and setup
+// 自动检测项目类型和设置
 const detection = await sdk.detectRuntime();
-console.log(detection.type); // 'node', 'python', 'docker', etc.
-console.log(detection.tools); // Available tools for this runtime
+console.log(detection.type); // 'node', 'python', 'docker' 等
+console.log(detection.tools); // 此运行时可用的工具
 ```
 
-### 📡 **Advanced Transport Layer**
+### 📡 **高级传输层**
 ```typescript
 import { TransportFactory, StdioLogFilterConfig } from '@mcpilotx/sdk-core';
 
-// Create transport with smart log filtering
+// 创建具有智能日志过滤的传输
 const logFilter: StdioLogFilterConfig = {
-  ignorePatterns: ['^DEBUG:', '^TRACE:'], // Hide debug logs
-  keepPatterns: ['^ERROR:', '^FATAL:'],   // Always show errors
-  timeout: 2000                           // Buffer timeout
+  ignorePatterns: ['^DEBUG:', '^TRACE:'], // 隐藏调试日志
+  keepPatterns: ['^ERROR:', '^FATAL:'],   // 始终显示错误
+  timeout: 2000                           // 缓冲区超时
 };
 
 const transport = TransportFactory.create({
@@ -102,9 +94,9 @@ const transport = TransportFactory.create({
 });
 ```
 
-## 📚 Comprehensive Examples
+## 📚 综合示例
 
-### Example 1: Full AI Application
+### 示例1：完整的AI应用程序
 ```typescript
 import { MCPilotSDK } from '@mcpilotx/sdk-core';
 
@@ -127,22 +119,22 @@ const sdk = new MCPilotSDK({
   }
 });
 
-// Ask AI to read and analyze a file
+// 让AI读取并分析文件
 const analysis = await sdk.ask(
-  "Read package.json and suggest improvements",
+  "读取package.json并建议改进",
   { useTools: true }
 );
 ```
 
-### Example 2: Custom Tool Integration
+### 示例2：自定义工具集成
 ```typescript
 import { MCPilotSDK, ToolRegistry } from '@mcpilotx/sdk-core';
 
-// Register custom tools
+// 注册自定义工具
 const registry = new ToolRegistry();
 registry.registerTool({
   name: 'calculate',
-  description: 'Perform mathematical calculations',
+  description: '执行数学计算',
   inputSchema: {
     type: 'object',
     properties: {
@@ -158,7 +150,7 @@ registry.registerTool({
 const sdk = new MCPilotSDK({ toolRegistry: registry });
 ```
 
-### Example 3: Server Discovery & Auto-Connect
+### 示例3：服务器发现与自动连接
 ```typescript
 import { 
   MCPilotSDK, 
@@ -166,26 +158,26 @@ import {
   loadMCPServersFromEnv 
 } from '@mcpilotx/sdk-core';
 
-// Auto-discover local MCP servers
+// 自动发现本地MCP服务器
 const servers = await discoverLocalMCPServers();
-// Or load from environment variables
+// 或从环境变量加载
 const envServers = loadMCPServersFromEnv();
 
 const sdk = new MCPilotSDK({
   mcp: { servers: [...servers, ...envServers] }
 });
 
-// Auto-connect to all discovered servers
+// 自动连接到所有发现的服务器
 await sdk.connectAllMCPServers();
 ```
 
-## 🛠️ Advanced Configuration
+## 🛠️ 高级配置
 
-### Transport Configuration
+### 传输配置
 ```typescript
 import { TransportConfig, StdioLogFilterConfig } from '@mcpilotx/sdk-core';
 
-// Stdio transport with advanced filtering
+// 具有高级过滤功能的Stdio传输
 const stdioConfig: TransportConfig = {
   type: 'stdio',
   command: 'python',
@@ -206,7 +198,7 @@ const stdioConfig: TransportConfig = {
   }
 };
 
-// HTTP transport
+// HTTP传输
 const httpConfig: TransportConfig = {
   type: 'http',
   url: 'http://localhost:8080/mcp',
@@ -215,35 +207,40 @@ const httpConfig: TransportConfig = {
   }
 };
 
-// SSE (Server-Sent Events) transport
+// SSE（服务器发送事件）传输
 const sseConfig: TransportConfig = {
   type: 'sse',
   url: 'http://localhost:8080/events'
 };
 ```
 
-### AI Provider Configuration
+### AI提供商配置
 ```typescript
 import { AIConfig } from '@mcpilotx/sdk-core';
 
 const aiConfig: AIConfig = {
-  provider: 'openai', // 'anthropic', 'google', 'azure', 'none'
-  apiKey: process.env.AI_API_KEY,
+  provider: 'openai', // 'anthropic', 'google', 'azure', 'deepseek', 'cohere', 'ollama', 'local', 'custom', 'none'
   model: 'gpt-4-turbo',
-  temperature: 0.7,
+  apiKey: process.env.AI_API_KEY,
+  apiEndpoint: 'https://api.openai.com/v1', // 可选：自定义API端点
+  timeout: 30000, // 请求超时时间（毫秒）
   maxTokens: 2000,
-  streaming: true, // Enable streaming responses
-  tools: true,     // Enable tool usage
-  cache: {
-    enabled: true,
-    ttl: 300000 // 5 minutes
-  }
+  temperature: 0.7,
+  // Azure特定配置
+  apiVersion: '2024-02-01', // Azure API版本
+  region: 'eastus', // Azure区域
+  // 本地模型配置
+  ollamaHost: 'http://localhost:11434', // Ollama主机地址
+  localModelPath: './models', // 本地模型路径
+  // 嵌入模型配置
+  embeddingProvider: 'openai',
+  embeddingModel: 'text-embedding-3-small'
 };
 ```
 
-## 🔌 MCP Protocol Support
+## 🔌 MCP协议支持
 
-### Built-in MCP Constants
+### 内置MCP常量
 ```typescript
 import { MCP_METHODS, MCP_ERROR_CODES } from '@mcpilotx/sdk-core';
 
@@ -252,108 +249,108 @@ console.log(MCP_METHODS.TOOLS_CALL);      // "tools/call"
 console.log(MCP_ERROR_CODES.PARSE_ERROR); // -32700
 ```
 
-### Tool Categories & Patterns
+### 工具类别和模式
 ```typescript
 import { TOOL_CATEGORIES, TOOL_PATTERNS } from '@mcpilotx/sdk-core';
 
-// Predefined categories
+// 预定义类别
 console.log(TOOL_CATEGORIES.FILESYSTEM); // "filesystem"
 console.log(TOOL_CATEGORIES.AI);         // "ai"
 
-// Predefined tool patterns
+// 预定义工具模式
 console.log(TOOL_PATTERNS.READ_FILE.name);    // "read_file"
 console.log(TOOL_PATTERNS.WRITE_FILE.name);   // "write_file"
 ```
 
-## 🧪 Testing & Development
+## 🧪 测试与开发
 
-### Run Tests
+### 运行测试
 ```bash
 npm test
-# Run specific test suite
+# 运行特定测试套件
 npm test -- tests/transport-improvements.test.ts
 ```
 
-### Build from Source
+### 从源代码构建
 ```bash
 npm run build
 ```
 
-### TypeScript Support
-Full TypeScript definitions included. Get autocomplete and type checking in your IDE.
+### TypeScript支持
+包含完整的TypeScript定义。在您的IDE中获得自动完成和类型检查。
 
-## 📖 API Reference
+## 📖 API参考
 
-### Core Classes
-- **`MCPilotSDK`** - Main SDK class
-- **`SimpleAI`** - AI service wrapper
-- **`MCPClient`** - MCP protocol client
-- **`ToolRegistry`** - Tool management
-- **`ConfigManager`** - Configuration management
+### 核心类
+- **`MCPilotSDK`** - 主SDK类
+- **`SimpleAI`** - AI服务包装器
+- **`MCPClient`** - MCP协议客户端
+- **`ToolRegistry`** - 工具管理
+- **`ConfigManager`** - 配置管理
 
-### Transport Layer
-- **`BaseTransport`** - Base transport class
-- **`StdioTransport`** - STDIO transport
-- **`HTTPTransport`** - HTTP transport  
-- **`SSETransport`** - SSE transport
-- **`TransportFactory`** - Transport creation
+### 传输层
+- **`BaseTransport`** - 基础传输类
+- **`StdioTransport`** - STDIO传输
+- **`HTTPTransport`** - HTTP传输  
+- **`SSETransport`** - SSE传输
+- **`TransportFactory`** - 传输创建
 
-### Utility Functions
-- **`createSDK()`** - Quick SDK creation
-- **`createMCPConfig()`** - MCP config helper
-- **`discoverLocalMCPServers()`** - Server discovery
-- **`loadMCPServersFromEnv()`** - Environment loader
+### 实用函数
+- **`createSDK()`** - 快速SDK创建
+- **`createMCPConfig()`** - MCP配置助手
+- **`discoverLocalMCPServers()`** - 服务器发现
+- **`loadMCPServersFromEnv()`** - 环境加载器
 
-## 🎯 Use Cases
+## 🎯 使用案例
 
-### 1. **AI-Powered Development Tools** 🛠️
-Build VS Code extensions, CLI tools, or IDEs that understand code context and can perform complex development tasks autonomously.
+### 1. **AI驱动的开发工具** 🛠️
+构建VS Code扩展、CLI工具或IDE，使其能够理解代码上下文并自主执行复杂的开发任务。
 
-### 2. **Automated Workflows**
-Create intelligent automation that can read files, call APIs, and make decisions.
+### 2. **自动化工作流**
+创建可以读取文件、调用API和做出决策的智能自动化。
 
-### 3. **Chat Applications**
-Build chatbots with access to tools and external data sources.
+### 3. **聊天应用程序**
+构建具有访问工具和外部数据源功能的聊天机器人。
 
-### 4. **DevOps Automation**
-Automate infrastructure management with AI-driven decisions.
+### 4. **DevOps自动化**
+通过AI驱动的决策自动化基础设施管理。
 
-### 5. **Educational Tools**
-Create interactive learning environments with AI tutors.
+### 5. **教育工具**
+创建具有AI导师的交互式学习环境。
 
-## 🔧 Advanced Features
+## 🔧 高级功能
 
-### Smart Log Filtering
+### 智能日志过滤
 ```typescript
-// Filter out noise, keep what matters
+// 过滤噪音，保留重要内容
 const transport = TransportFactory.create({
   type: 'stdio',
   command: 'noisy-server',
   logFilter: {
-    // Hide timestamped INFO logs
+    // 隐藏带时间戳的INFO日志
     ignorePatterns: ['^\\[\\d{4}-\\d{2}-\\d{2}.*INFO.*'],
-    // Always show errors and warnings
+    // 始终显示错误和警告
     keepPatterns: ['^ERROR:', '^WARN:', '^FATAL:'],
-    // Buffer incomplete JSON for 2 seconds
+    // 为不完整的JSON缓冲2秒
     timeout: 2000
   }
 });
 ```
 
-### Multi-line JSON Support
-Automatically handles JSON that spans multiple lines in output streams.
+### 多行JSON支持
+自动处理输出流中跨多行的JSON。
 
-### Error Recovery
-Built-in retry logic and error handling for network issues.
+### 错误恢复
+内置网络问题的重试逻辑和错误处理。
 
-### Performance Monitoring
-Track response times and optimize performance.
+### 性能监控
+跟踪响应时间并优化性能。
 
-## 🚀 AI-Powered Development Tools - Deep Dive
+## 🚀 AI驱动的开发工具 - 深度探索
 
-MCPilot SDK Core is specifically designed for building next-generation AI-powered development tools. Here are comprehensive examples showing how to build intelligent development assistants:
+MCPilot SDK Core专门设计用于构建下一代AI驱动的开发工具。以下是展示如何构建智能开发助手的综合示例：
 
-### Example 1: Intelligent Code Review Assistant
+### 示例1：智能代码审查助手
 ```typescript
 import { MCPilotSDK, ToolRegistry } from '@mcpilotx/sdk-core';
 
@@ -363,10 +360,10 @@ class CodeReviewAssistant {
   constructor() {
     const registry = new ToolRegistry();
     
-    // Register development-specific tools
+    // 注册开发特定工具
     registry.registerTool({
       name: 'analyze_code',
-      description: 'Analyze code for issues and improvements',
+      description: '分析代码以查找问题和改进',
       inputSchema: {
         type: 'object',
         properties: {
@@ -376,9 +373,9 @@ class CodeReviewAssistant {
         required: ['code']
       },
       execute: async ({ code, language }) => {
-        // Use AI to analyze code
+        // 使用AI分析代码
         const analysis = await this.sdk.ask(
-          `Analyze this ${language} code for issues:\n${code}`,
+          `分析此${language}代码以查找问题：\n${code}`,
           { useTools: false }
         );
         return { analysis };
@@ -387,7 +384,7 @@ class CodeReviewAssistant {
     
     registry.registerTool({
       name: 'suggest_refactoring',
-      description: 'Suggest code refactoring improvements',
+      description: '建议代码重构改进',
       inputSchema: {
         type: 'object',
         properties: {
@@ -398,7 +395,7 @@ class CodeReviewAssistant {
       },
       execute: async ({ code, issue }) => {
         const suggestion = await this.sdk.ask(
-          `Suggest refactoring for this code to fix: ${issue}\nCode:\n${code}`,
+          `为此代码建议重构以修复：${issue}\n代码：\n${code}`,
           { useTools: false }
         );
         return { suggestion };
@@ -416,21 +413,21 @@ class CodeReviewAssistant {
   }
   
   async reviewCode(filePath: string, language: string): Promise<string> {
-    // Read file content (using MCP filesystem server)
-    const fileContent = await this.sdk.useTool('read_file', { 
+    // 读取文件内容（使用MCP文件系统服务器）
+    const fileContent = await this.sdk.executeTool('read_file', { 
       path: filePath,
       encoding: 'utf-8'
     });
     
-    // Analyze the code
-    const analysis = await this.sdk.useTool('analyze_code', {
+    // 分析代码
+    const analysis = await this.sdk.executeTool('analyze_code', {
       code: fileContent.content,
       language
     });
     
-    // Generate review report
+    // 生成审查报告
     const report = await this.sdk.ask(
-      `Generate a comprehensive code review report based on this analysis: ${analysis.analysis}`,
+      `基于此分析生成全面的代码审查报告：${analysis.analysis}`,
       { useTools: true }
     );
     
@@ -438,13 +435,13 @@ class CodeReviewAssistant {
   }
 }
 
-// Usage
+// 使用
 const assistant = new CodeReviewAssistant();
 const review = await assistant.reviewCode('src/app.ts', 'typescript');
-console.log('Code Review:', review);
+console.log('代码审查：', review);
 ```
 
-### Example 2: Smart CLI Development Tool
+### 示例2：智能CLI开发工具
 ```typescript
 import { MCPilotSDK, createSDK } from '@mcpilotx/sdk-core';
 import { Command } from 'commander';
@@ -488,10 +485,10 @@ class DevCLI {
   private setupCommands() {
     this.program
       .command('explain <file>')
-      .description('Explain what a file does')
+      .description('解释文件的功能')
       .action(async (file) => {
         const explanation = await this.sdk.ask(
-          `Explain what this file does: ${file}`,
+          `解释此文件的功能：${file}`,
           { useTools: true }
         );
         console.log(explanation);
@@ -499,10 +496,10 @@ class DevCLI {
     
     this.program
       .command('debug <file>')
-      .description('Help debug issues in a file')
+      .description('帮助调试文件中的问题')
       .action(async (file) => {
         const debugHelp = await this.sdk.ask(
-          `Help me debug issues in: ${file}`,
+          `帮助我调试此文件中的问题：${file}`,
           { useTools: true }
         );
         console.log(debugHelp);
@@ -510,11 +507,11 @@ class DevCLI {
     
     this.program
       .command('generate <component>')
-      .description('Generate code for a component')
-      .option('-t, --type <type>', 'Component type', 'react')
+      .description('为组件生成代码')
+      .option('-t, --type <type>', '组件类型', 'react')
       .action(async (component, options) => {
         const code = await this.sdk.ask(
-          `Generate ${options.type} code for: ${component}`,
+          `为${component}生成${options.type}代码`,
           { useTools: true }
         );
         console.log(code);
@@ -527,17 +524,17 @@ class DevCLI {
   }
 }
 
-// Usage: node dev-cli.js explain src/components/Button.tsx
-// Usage: node dev-cli.js generate user-profile --type=vue
+// 使用：node dev-cli.js explain src/components/Button.tsx
+// 使用：node dev-cli.js generate user-profile --type=vue
 ```
 
-### Example 3: VS Code Extension with AI Capabilities
+### 示例3：具有AI功能的VS Code扩展
 ```typescript
 import * as vscode from 'vscode';
 import { MCPilotSDK } from '@mcpilotx/sdk-core';
 
 export function activate(context: vscode.ExtensionContext) {
-  // Initialize SDK
+  // 初始化SDK
   const sdk = new MCPilotSDK({
     ai: {
       provider: 'openai',
@@ -545,7 +542,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
   
-  // Register "Explain Code" command
+  // 注册"解释代码"命令
   const explainCommand = vscode.commands.registerCommand(
     'mcpilot.explainCode',
     async () => {
@@ -557,17 +554,17 @@ export function activate(context: vscode.ExtensionContext) {
       
       vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: 'Analyzing code...',
+        title: '正在分析代码...',
         cancellable: false
       }, async (progress) => {
         const explanation = await sdk.ask(
-          `Explain this code:\n${text}`,
+          `解释此代码：\n${text}`,
           { useTools: true }
         );
         
-        // Show explanation in a new editor
+        // 在新编辑器中显示解释
         const doc = await vscode.workspace.openTextDocument({
-          content: `# Code Explanation\n\n${explanation}`,
+          content: `# 代码解释\n\n${explanation}`,
           language: 'markdown'
         });
         await vscode.window.showTextDocument(doc);
@@ -575,7 +572,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   
-  // Register "Refactor Code" command
+  // 注册"重构代码"命令
   const refactorCommand = vscode.commands.registerCommand(
     'mcpilot.refactorCode',
     async () => {
@@ -586,11 +583,11 @@ export function activate(context: vscode.ExtensionContext) {
       const text = document.getText();
       
       const refactoring = await sdk.ask(
-        `Suggest refactoring improvements for this code:\n${text}`,
+        `为此代码建议重构改进：\n${text}`,
         { useTools: true }
       );
       
-      // Apply refactoring suggestions
+      // 应用重构建议
       const edit = new vscode.WorkspaceEdit();
       edit.replace(
         document.uri,
@@ -601,7 +598,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   
-  // Register "Generate Tests" command
+  // 注册"生成测试"命令
   const testCommand = vscode.commands.registerCommand(
     'mcpilot.generateTests',
     async () => {
@@ -612,11 +609,11 @@ export function activate(context: vscode.ExtensionContext) {
       const language = editor.document.languageId;
       
       const tests = await sdk.ask(
-        `Generate unit tests for this ${language} code:\n${text}`,
+        `为此${language}代码生成单元测试：\n${text}`,
         { useTools: true }
       );
       
-      // Create test file
+      // 创建测试文件
       const testFileName = editor.document.fileName.replace(
         /\.(\w+)$/, 
         `.test.$1`
@@ -639,7 +636,7 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 ```
 
-### Example 4: Automated Documentation Generator
+### 示例4：自动化文档生成器
 ```typescript
 import { MCPilotSDK } from '@mcpilotx/sdk-core';
 import fs from 'fs/promises';
@@ -664,13 +661,13 @@ class DocumentationGenerator {
       const content = await fs.readFile(file, 'utf-8');
       const relativePath = path.relative(sourceDir, file);
       
-      // Generate documentation using AI
+      // 使用AI生成文档
       const docs = await this.sdk.ask(
-        `Generate comprehensive API documentation for this code:\n${content}`,
+        `为此代码生成全面的API文档：\n${content}`,
         { useTools: false }
       );
       
-      // Save documentation
+      // 保存文档
       const outputFile = path.join(
         outputDir, 
         relativePath.replace(/\.\w+$/, '.md')
@@ -678,7 +675,7 @@ class DocumentationGenerator {
       await fs.mkdir(path.dirname(outputFile), { recursive: true });
       await fs.writeFile(outputFile, docs);
       
-      console.log(`Generated docs for: ${relativePath}`);
+      console.log(`已为以下文件生成文档：${relativePath}`);
     }
   }
   
@@ -688,11 +685,11 @@ class DocumentationGenerator {
     );
     
     const readmeContent = await this.sdk.ask(
-      `Generate a comprehensive README.md for a project with:\n` +
-      `Name: ${packageJson.name}\n` +
-      `Description: ${packageJson.description || 'No description'}\n` +
-      `Version: ${packageJson.version}\n` +
-      `Include installation, usage, API reference, and examples.`,
+      `为具有以下信息的项目生成全面的README.md：\n` +
+      `名称：${packageJson.name}\n` +
+      `描述：${packageJson.description || '无描述'}\n` +
+      `版本：${packageJson.version}\n` +
+      `包括安装、使用、API参考和示例。`,
       { useTools: true }
     );
     
@@ -726,45 +723,45 @@ class DocumentationGenerator {
   }
 }
 
-// Usage
+// 使用
 const generator = new DocumentationGenerator();
 await generator.generateAPIDocs('./src', './docs/api');
 await generator.generateReadme('.');
 ```
 
-### Key Benefits for Development Tools:
-1. **Context-Aware Assistance** - AI understands your codebase
-2. **Tool Integration** - Access filesystem, git, APIs directly
-3. **Smart Filtering** - Our improved transport layer filters noise from tool output
-4. **Multi-line JSON Support** - Handle complex tool responses seamlessly
-5. **Error Resilience** - Built-in retry and error handling
+### 开发工具的关键优势：
+1. **上下文感知的协助** - AI理解您的代码库
+2. **工具集成** - 直接访问文件系统、git、API
+3. **智能过滤** - 我们改进的传输层从工具输出中过滤噪音
+4. **多行JSON支持** - 无缝处理复杂的工具响应
+5. **错误恢复能力** - 内置重试和错误处理
 
-## 🤝 Contributing
+## 🤝 贡献
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+我们欢迎贡献！请参阅 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
 
-## 📄 License
+## 📄 许可证
 
-Apache 2.0 - See [LICENSE](LICENSE) for details.
+Apache 2.0 - 查看 [LICENSE](LICENSE) 了解详情。
 
-## 🆘 Support
+## 🆘 支持
 
-- **Documentation**: See [docs/](docs/) for detailed guides
-- **Issues**: [GitHub Issues](https://github.com/MCPilotX/sdk-core/issues)
-- **Examples**: Check [examples/](examples/) directory
+- **文档**：查看 [docs/](docs/) 获取详细指南
+- **问题**：[GitHub Issues](https://github.com/MCPilotX/sdk-core/issues)
+- **示例**：查看 [examples/](examples/) 目录
 
-## 🚀 Ready to Build?
+## 🚀 准备构建？
 
-Start building intelligent applications today with MCPilot SDK Core!
+立即开始使用MCPilot SDK Core构建智能应用程序！
 
 ```typescript
 import { MCPilotSDK } from '@mcpilotx/sdk-core';
 
 const sdk = new MCPilotSDK();
-const future = await sdk.ask("What amazing things can I build with this SDK?");
+const future = await sdk.ask("我能用这个SDK构建什么令人惊叹的东西？");
 console.log(future);
 ```
 
 ---
 
-**Built with ❤️ by the MCPilot Team**
+**由MCPilot团队用 ❤️ 构建**

@@ -77,10 +77,10 @@ export class MCPilotSDK {
   private configManager: ConfigManager;
   private initialized = false;
   private logger: SDKOptions['logger'];
-  
+
   // AI instance
   private ai: SimpleAI;
-  
+
   // MCP related properties
   private mcpClients: Map<string, MCPClient> = new Map();
   private toolRegistry: ToolRegistry = new ToolRegistry();
@@ -101,7 +101,7 @@ export class MCPilotSDK {
 
     // Initialize configuration manager
     this.configManager = ConfigManager;
-    
+
     if (options.autoInit !== false) {
       this.init();
     }
@@ -117,10 +117,10 @@ export class MCPilotSDK {
 
     try {
       ConfigManager.init();
-      
+
       // Register runtime adapter factories
       this.registerRuntimeAdapters();
-      
+
       this.initialized = true;
       this.logger.info('MCPilot SDK initialized successfully');
     } catch (error) {
@@ -142,7 +142,7 @@ export class MCPilotSDK {
         config.detectedRuntime = detection.runtime;
         config.detectionConfidence = detection.confidence;
         config.detectionSource = detection.source;
-        
+
         this.logger.info(`Detected runtime: ${detection.runtime} (confidence: ${detection.confidence})`);
       }
 
@@ -176,7 +176,7 @@ export class MCPilotSDK {
       // Create runtime adapter and start service
       const adapter = RuntimeAdapterRegistry.createAdapter(runtime, config) as any;
       await adapter.start();
-      
+
       this.logger.info(`Service '${name}' started successfully`);
     } catch (error: any) {
       this.logger.error(`Failed to start service '${name}': ${error}`);
@@ -204,7 +204,7 @@ export class MCPilotSDK {
       // Create runtime adapter and stop service
       const adapter = RuntimeAdapterRegistry.createAdapter(runtime, config) as any;
       await adapter.stop();
-      
+
       this.logger.info(`Service '${name}' stopped successfully`);
     } catch (error: any) {
       this.logger.error(`Failed to stop service '${name}': ${String(error)}`);
@@ -243,7 +243,7 @@ export class MCPilotSDK {
       // Create runtime adapter and check status
       const adapter = RuntimeAdapterRegistry.createAdapter(runtime, config) as any;
       const status = await adapter.status();
-      
+
       return {
         name,
         status: status.running ? 'running' : 'stopped',
@@ -272,7 +272,7 @@ export class MCPilotSDK {
    */
   async updateConfig(updates: Partial<Config>): Promise<void> {
     this.ensureInitialized();
-    
+
     try {
       ConfigManager.saveGlobalConfig(updates);
       this.logger.info('Configuration updated successfully');
@@ -292,7 +292,7 @@ export class MCPilotSDK {
       // Use SimpleAI instance to process query
       // This will throw AIError if AI is not configured
       const aiResult = await this.ai.ask(query);
-      
+
       // Convert SimpleAI result to SDK AskResult format
       if (aiResult.type === 'tool_call' && aiResult.tool) {
         return {
@@ -300,19 +300,19 @@ export class MCPilotSDK {
           toolCalls: [{
             service: aiResult.tool.service,
             tool: aiResult.tool.tool,
-            params: aiResult.tool.params
+            params: aiResult.tool.params,
           }],
-          confidence: aiResult.confidence || 0.5
+          confidence: aiResult.confidence || 0.5,
         };
       } else if (aiResult.type === 'suggestions') {
         return {
           answer: aiResult.message || 'AI feature not enabled or configured incorrectly',
-          confidence: 0.3
+          confidence: 0.3,
         };
       } else {
         return {
           answer: 'AI processed your query but no specific action was suggested.',
-          confidence: aiResult.confidence || 0.5
+          confidence: aiResult.confidence || 0.5,
         };
       }
     } catch (error) {
@@ -320,7 +320,7 @@ export class MCPilotSDK {
       if (error instanceof AIError) {
         throw error;
       }
-      
+
       this.logger.error(`AI query failed: ${error}`);
       throw new Error(`AI query failed: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -335,10 +335,12 @@ export class MCPilotSDK {
     try {
       // Convert SDK AI config to SimpleAI config format
       const simpleAIConfig = {
-        provider: (config.provider as 'openai' | 'ollama' | 'none') || 'none',
+        provider: (config.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'deepseek' | 'ollama' | 'none') || 'none',
         apiKey: config.apiKey,
         endpoint: config.apiEndpoint || config.ollamaHost,
-        model: config.model
+        model: config.model,
+        apiVersion: config.apiVersion,
+        region: config.region,
       };
 
       // Configure the SimpleAI instance
@@ -353,12 +355,65 @@ export class MCPilotSDK {
           ...config,
         },
       };
-      
+
       await this.updateConfig(updatedConfig);
       this.logger.info('AI configuration updated successfully');
     } catch (error) {
       this.logger.error(`Failed to configure AI: ${error}`);
       throw error;
+    }
+  }
+
+  /**
+   * Get AI status
+   */
+  getAIStatus(): {
+    enabled: boolean;
+    provider: string;
+    configured: boolean;
+    model?: string;
+    } {
+    this.ensureInitialized();
+
+    try {
+      // Get status from SimpleAI instance
+      const aiStatus = this.ai.getStatus();
+
+      // Get current config for additional details
+      const config = this.getConfig();
+
+      return {
+        enabled: aiStatus.enabled,
+        provider: aiStatus.provider,
+        configured: aiStatus.configured,
+        model: config.ai?.model,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get AI status: ${error}`);
+      return {
+        enabled: false,
+        provider: 'none',
+        configured: false,
+      };
+    }
+  }
+
+  /**
+   * Test AI connection
+   */
+  async testAIConnection(): Promise<{ success: boolean; message: string }> {
+    this.ensureInitialized();
+
+    try {
+      // Test connection using SimpleAI instance
+      const result = await this.ai.testConnection();
+      return result;
+    } catch (error) {
+      this.logger.error(`AI connection test failed: ${error}`);
+      return {
+        success: false,
+        message: `Connection test failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
   }
 
@@ -512,7 +567,7 @@ export class MCPilotSDK {
 
     try {
       const servers = await discoverLocalMCPServers();
-      
+
       servers.forEach(server => {
         this.logger.info(`Discovered MCP server: ${server.name}`);
       });
@@ -564,10 +619,10 @@ export class MCPilotSDK {
     try {
       await client.disconnect();
       this.mcpClients.delete(name);
-      
+
       // Remove related tools
       this.removeMCPServerTools(name);
-      
+
       this.logger.info(`Disconnected from MCP server: ${name}`);
     } catch (error) {
       this.logger.error(`Failed to disconnect from MCP server '${name}': ${error}`);
@@ -582,43 +637,43 @@ export class MCPilotSDK {
     this.ensureInitialized();
 
     const results = [];
-    
+
     for (const serverConfig of config.servers) {
       try {
         const name = serverConfig.name || `server-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Convert to MCPClientConfig format
         const mcpConfig: MCPClientConfig = {
-          transport: serverConfig.transport
+          transport: serverConfig.transport,
         };
-        
+
         const client = await this.connectMCPServer(mcpConfig, name);
         const tools = await client.listTools();
-        
+
         results.push({
           name,
           success: true,
-          toolsCount: tools.length
+          toolsCount: tools.length,
         });
-        
+
         this.logger.info(`Successfully connected to server "${name}" with ${tools.length} tools`);
       } catch (error: any) {
         const serverName = serverConfig.name || 'unnamed-server';
         results.push({
           name: serverName,
           success: false,
-          error: error.message
+          error: error.message,
         });
-        
+
         this.logger.error(`Failed to connect to server "${serverName}": ${error.message}`);
       }
     }
-    
+
     const successCount = results.filter(r => r.success).length;
     const totalCount = results.length;
-    
+
     this.logger.info(`Batch connection completed: ${successCount}/${totalCount} servers connected successfully`);
-    
+
     return results;
   }
 
@@ -630,32 +685,32 @@ export class MCPilotSDK {
 
     const results = [];
     const serverNames = Array.from(this.mcpClients.keys());
-    
+
     for (const name of serverNames) {
       try {
         await this.disconnectMCPServer(name);
         results.push({
           name,
-          success: true
+          success: true,
         });
-        
+
         this.logger.info(`Successfully disconnected from server "${name}"`);
       } catch (error: any) {
         results.push({
           name,
           success: false,
-          error: error.message
+          error: error.message,
         });
-        
+
         this.logger.error(`Failed to disconnect from server "${name}": ${error.message}`);
       }
     }
-    
+
     const successCount = results.filter(r => r.success).length;
     const totalCount = results.length;
-    
+
     this.logger.info(`Batch disconnection completed: ${successCount}/${totalCount} servers disconnected successfully`);
-    
+
     return results;
   }
 

@@ -47,7 +47,7 @@ export class RuntimeDetector {
     for (const file of files) {
       const filePath = path.join(servicePath, file);
       const stat = fs.statSync(filePath);
-      
+
       if (stat.isFile()) {
         if (file.endsWith('.go')) {
           return 'go';
