@@ -10,6 +10,7 @@ import { EnhancedRuntimeDetector } from './runtime/detector-advanced';
 
 // AI imports
 import { SimpleAI, AIError } from './ai/ai';
+import { CloudIntentEngine, type CloudIntentEngineConfig } from './ai/cloud-intent-engine';
 
 // MCP related imports
 import { MCPClient, ToolRegistry, createMCPConfig, discoverLocalMCPServers } from './mcp';
@@ -80,6 +81,9 @@ export class MCPilotSDK {
 
   // AI instance
   private ai: SimpleAI;
+
+  // Cloud Intent Engine
+  private cloudIntentEngine?: CloudIntentEngine;
 
   // MCP related properties
   private mcpClients: Map<string, MCPClient> = new Map();
@@ -806,6 +810,521 @@ export class MCPilotSDK {
   getToolStatistics(): any {
     this.ensureInitialized();
     return this.toolRegistry.getToolStatistics();
+  }
+
+  // ==================== Cloud Intent Engine Methods ====================
+
+  /**
+   * Initialize Cloud Intent Engine
+   */
+  async initCloudIntentEngine(config?: CloudIntentEngineConfig): Promise<void> {
+    this.ensureInitialized();
+
+    try {
+      // Use provided config or create from SDK config
+      const engineConfig = config || this.createCloudIntentEngineConfig();
+      
+      this.cloudIntentEngine = new CloudIntentEngine(engineConfig);
+      await this.cloudIntentEngine.initialize();
+
+      // Set available tools from tool registry
+      const tools = this.toolRegistry.getAllTools().map(t => t.tool);
+      this.cloudIntentEngine.setAvailableTools(tools);
+
+      this.logger.info('Cloud Intent Engine initialized successfully');
+    } catch (error) {
+      this.logger.error(`Failed to initialize Cloud Intent Engine: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create Cloud Intent Engine config from SDK config
+   */
+  private createCloudIntentEngineConfig(): CloudIntentEngineConfig {
+    const config = this.getConfig();
+    const aiConfig = config.ai || {};
+
+    // Define AI config type to avoid TypeScript errors
+    const typedAiConfig = aiConfig as {
+      provider?: string;
+      apiKey?: string;
+      apiEndpoint?: string;
+      ollamaHost?: string;
+      model?: string;
+    };
+
+    return {
+      llm: {
+        provider: (typedAiConfig.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'deepseek' | 'ollama' | 'none') || 'openai',
+        apiKey: typedAiConfig.apiKey,
+        endpoint: typedAiConfig.apiEndpoint || typedAiConfig.ollamaHost,
+        model: typedAiConfig.model || 'gpt-3.5-turbo',
+        temperature: 0.1,
+        maxTokens: 2048,
+        timeout: 30000,
+        maxRetries: 3,
+      },
+      execution: {
+        maxConcurrentTools: 3,
+        timeout: 60000,
+        retryAttempts: 2,
+        retryDelay: 1000,
+      },
+      fallback: {
+        enableKeywordMatching: true,
+        askUserOnFailure: false,
+        defaultTools: {},
+      },
+    };
+  }
+
+  /**
+   * Process natural language workflow
+   */
+  async processWorkflow(query: string): Promise<{
+    success: boolean;
+    result?: any;
+    steps?: Array<{
+      intentId: string;
+      toolName: string;
+      success: boolean;
+      result?: any;
+      error?: string;
+    }>;
+    error?: string;
+  }> {
+    this.ensureInitialized();
+
+    // Check if Cloud Intent Engine is initialized
+    if (!this.cloudIntentEngine) {
+      throw new Error('Cloud Intent Engine not initialized. Call initCloudIntentEngine() first.');
+    }
+
+    try {
+      // 1. Parse intent
+      const intentResult = await this.cloudIntentEngine.parseIntent(query);
+      
+      // 2. Select tools
+      const toolSelections = await this.cloudIntentEngine.selectTools(intentResult.intents);
+      
+      // 3. Execute workflow
+      const executionResult = await this.cloudIntentEngine.executeWorkflow(
+        intentResult.intents,
+        toolSelections,
+        intentResult.edges,
+        async (toolName: string, params: Record<string, any>) => {
+          return await this.executeTool(toolName, params);
+        }
+      );
+
+      return {
+        success: executionResult.success,
+        result: executionResult.finalResult,
+        steps: executionResult.stepResults,
+      };
+    } catch (error: any) {
+      this.logger.error(`Workflow processing failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Parse and plan workflow (without execution)
+   * Returns detailed plan with intents, tool selections, and dependencies
+   */
+  async parseAndPlanWorkflow(query: string): Promise<{
+    success: boolean;
+    plan?: {
+      query: string;
+      parsedIntents: Array<{
+        id: string;
+        type: string;
+        description: string;
+        parameters: Record<string, any>;
+      }>;
+      dependencies: Array<{
+        from: string;
+        to: string;
+      }>;
+      toolSelections: Array<{
+        intentId: string;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+      }>;
+      executionOrder: string[];
+      estimatedSteps: number;
+      createdAt: Date;
+    };
+    error?: string;
+  }> {
+    this.ensureInitialized();
+
+    // Check if Cloud Intent Engine is initialized
+    if (!this.cloudIntentEngine) {
+      throw new Error('Cloud Intent Engine not initialized. Call initCloudIntentEngine() first.');
+    }
+
+    try {
+      const plan = await this.cloudIntentEngine.parseAndPlan(query);
+      
+      return {
+        success: true,
+        plan,
+      };
+    } catch (error: any) {
+      this.logger.error(`Workflow planning failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Execute workflow with enhanced tracking and detailed reporting
+   */
+  async executeWorkflowWithTracking(
+    query: string,
+    callbacks?: {
+      onStepStarted?: (step: { intentId: string; toolName: string; intentDescription: string }) => void;
+      onStepCompleted?: (step: {
+        intentId: string;
+        intentDescription: string;
+        intentType: string;
+        intentParameters: Record<string, any>;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+        success: boolean;
+        result?: any;
+        error?: string;
+        duration?: number;
+        startedAt?: Date;
+        completedAt?: Date;
+      }) => void;
+      onStepFailed?: (step: {
+        intentId: string;
+        intentDescription: string;
+        intentType: string;
+        intentParameters: Record<string, any>;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+        success: boolean;
+        error?: string;
+        duration?: number;
+        startedAt?: Date;
+        completedAt?: Date;
+      }) => void;
+    }
+  ): Promise<{
+    success: boolean;
+    result?: any;
+    parsedIntents?: Array<{
+      id: string;
+      type: string;
+      description: string;
+      parameters: Record<string, any>;
+    }>;
+    dependencies?: Array<{
+      from: string;
+      to: string;
+    }>;
+    toolSelections?: Array<{
+      intentId: string;
+      toolName: string;
+      toolDescription: string;
+      mappedParameters: Record<string, any>;
+      confidence: number;
+    }>;
+    executionSteps?: Array<{
+      intentId: string;
+      intentDescription: string;
+      intentType: string;
+      intentParameters: Record<string, any>;
+      toolName: string;
+      toolDescription: string;
+      mappedParameters: Record<string, any>;
+      confidence: number;
+      success: boolean;
+      result?: any;
+      error?: string;
+      duration?: number;
+      startedAt?: Date;
+      completedAt?: Date;
+    }>;
+    statistics?: {
+      totalSteps: number;
+      successfulSteps: number;
+      failedSteps: number;
+      totalDuration: number;
+      averageStepDuration: number;
+      llmCalls: number;
+    };
+    error?: string;
+  }> {
+    this.ensureInitialized();
+
+    // Check if Cloud Intent Engine is initialized
+    if (!this.cloudIntentEngine) {
+      throw new Error('Cloud Intent Engine not initialized. Call initCloudIntentEngine() first.');
+    }
+
+    try {
+      // Parse intent
+      const intentResult = await this.cloudIntentEngine.parseIntent(query);
+      
+      // Select tools
+      const toolSelections = await this.cloudIntentEngine.selectTools(intentResult.intents);
+      
+      // Execute with enhanced tracking
+      const enhancedResult = await this.cloudIntentEngine.executeWorkflowWithTracking(
+        intentResult.intents,
+        toolSelections,
+        intentResult.edges,
+        async (toolName: string, params: Record<string, any>) => {
+          return await this.executeTool(toolName, params);
+        },
+        callbacks
+      );
+
+      return {
+        success: enhancedResult.success,
+        result: enhancedResult.finalResult,
+        parsedIntents: enhancedResult.parsedIntents,
+        dependencies: enhancedResult.dependencies,
+        toolSelections: enhancedResult.toolSelections,
+        executionSteps: enhancedResult.executionSteps,
+        statistics: enhancedResult.statistics,
+      };
+    } catch (error: any) {
+      this.logger.error(`Workflow execution with tracking failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Preview workflow plan (parse and select tools only)
+   */
+  async previewWorkflowPlan(query: string): Promise<{
+    success: boolean;
+    plan?: {
+      query: string;
+      parsedIntents: Array<{
+        id: string;
+        type: string;
+        description: string;
+        parameters: Record<string, any>;
+      }>;
+      dependencies: Array<{
+        from: string;
+        to: string;
+      }>;
+      toolSelections: Array<{
+        intentId: string;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+      }>;
+      executionOrder: string[];
+      estimatedSteps: number;
+      createdAt: Date;
+    };
+    error?: string;
+  }> {
+    this.ensureInitialized();
+
+    // Check if Cloud Intent Engine is initialized
+    if (!this.cloudIntentEngine) {
+      throw new Error('Cloud Intent Engine not initialized. Call initCloudIntentEngine() first.');
+    }
+
+    try {
+      const plan = await this.cloudIntentEngine.previewPlan(query);
+      
+      return {
+        success: true,
+        plan,
+      };
+    } catch (error: any) {
+      this.logger.error(`Workflow preview failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Confirm and execute a workflow plan
+   */
+  async confirmAndExecuteWorkflow(
+    plan: {
+      query: string;
+      parsedIntents: Array<{
+        id: string;
+        type: string;
+        description: string;
+        parameters: Record<string, any>;
+      }>;
+      dependencies: Array<{
+        from: string;
+        to: string;
+      }>;
+      toolSelections: Array<{
+        intentId: string;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+      }>;
+      executionOrder: string[];
+      estimatedSteps: number;
+      createdAt: Date;
+    },
+    callbacks?: {
+      onStepStarted?: (step: { intentId: string; toolName: string; intentDescription: string }) => void;
+      onStepCompleted?: (step: {
+        intentId: string;
+        intentDescription: string;
+        intentType: string;
+        intentParameters: Record<string, any>;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+        success: boolean;
+        result?: any;
+        error?: string;
+        duration?: number;
+        startedAt?: Date;
+        completedAt?: Date;
+      }) => void;
+      onStepFailed?: (step: {
+        intentId: string;
+        intentDescription: string;
+        intentType: string;
+        intentParameters: Record<string, any>;
+        toolName: string;
+        toolDescription: string;
+        mappedParameters: Record<string, any>;
+        confidence: number;
+        success: boolean;
+        error?: string;
+        duration?: number;
+        startedAt?: Date;
+        completedAt?: Date;
+      }) => void;
+    }
+  ): Promise<{
+    success: boolean;
+    result?: any;
+    executionSteps?: Array<{
+      intentId: string;
+      intentDescription: string;
+      intentType: string;
+      intentParameters: Record<string, any>;
+      toolName: string;
+      toolDescription: string;
+      mappedParameters: Record<string, any>;
+      confidence: number;
+      success: boolean;
+      result?: any;
+      error?: string;
+      duration?: number;
+      startedAt?: Date;
+      completedAt?: Date;
+    }>;
+    statistics?: {
+      totalSteps: number;
+      successfulSteps: number;
+      failedSteps: number;
+      totalDuration: number;
+      averageStepDuration: number;
+      llmCalls: number;
+    };
+    error?: string;
+  }> {
+    this.ensureInitialized();
+
+    // Check if Cloud Intent Engine is initialized
+    if (!this.cloudIntentEngine) {
+      throw new Error('Cloud Intent Engine not initialized. Call initCloudIntentEngine() first.');
+    }
+
+    try {
+      const enhancedResult = await this.cloudIntentEngine.confirmAndExecute(
+        plan,
+        async (toolName: string, params: Record<string, any>) => {
+          return await this.executeTool(toolName, params);
+        },
+        callbacks
+      );
+
+      return {
+        success: enhancedResult.success,
+        result: enhancedResult.finalResult,
+        executionSteps: enhancedResult.executionSteps,
+        statistics: enhancedResult.statistics,
+      };
+    } catch (error: any) {
+      this.logger.error(`Workflow confirmation and execution failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get Cloud Intent Engine status
+   */
+  getCloudIntentEngineStatus(): {
+    initialized: boolean;
+    toolsCount: number;
+    llmProvider: string;
+    llmConfigured: boolean;
+  } {
+    this.ensureInitialized();
+
+    if (!this.cloudIntentEngine) {
+      return {
+        initialized: false,
+        toolsCount: 0,
+        llmProvider: 'none',
+        llmConfigured: false,
+      };
+    }
+
+    return this.cloudIntentEngine.getStatus();
+  }
+
+  /**
+   * Update available tools for Cloud Intent Engine
+   */
+  updateCloudIntentEngineTools(): void {
+    this.ensureInitialized();
+
+    if (!this.cloudIntentEngine) {
+      throw new Error('Cloud Intent Engine not initialized');
+    }
+
+    const tools = this.toolRegistry.getAllTools().map(t => t.tool);
+    this.cloudIntentEngine.setAvailableTools(tools);
+    
+    this.logger.info(`Updated Cloud Intent Engine with ${tools.length} tools`);
   }
 }
 

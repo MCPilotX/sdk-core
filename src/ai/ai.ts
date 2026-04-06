@@ -1143,6 +1143,303 @@ export class SimpleAI {
   }
 
   /**
+   * Call raw LLM API with custom messages and options
+   * This method supports advanced use cases like function calling, JSON mode, etc.
+   */
+  async callRawAPI(options: {
+    messages: Array<{ role: string; content: string }>;
+    temperature?: number;
+    maxTokens?: number;
+    responseFormat?: { type: 'text' | 'json_object' };
+    functions?: Array<{
+      name: string;
+      description?: string;
+      parameters: Record<string, any>;
+    }>;
+    functionCall?: 'auto' | 'none' | { name: string };
+  }): Promise<any> {
+    // Check if AI is enabled
+    if (!this.enabled || !this.config || this.config.provider === 'none') {
+      throw new AIError(
+        'AI_NOT_CONFIGURED',
+        'AI provider not configured. Please call configure() with a valid API key.',
+        'config',
+        [
+          'Run: mcpilot.configureAI({ provider: "openai", apiKey: "YOUR_API_KEY" })',
+          'Get OpenAI API key: https://platform.openai.com/api-keys',
+          'Or use Ollama: mcpilot.configureAI({ provider: "ollama", endpoint: "http://localhost:11434" })',
+        ],
+      );
+    }
+
+    try {
+      const provider = this.config.provider;
+      const apiKey = this.config.apiKey;
+      const model = this.config.model || this.getDefaultModel(provider);
+
+      // Prepare request based on provider
+      switch (provider) {
+        case 'openai':
+          return await this.callOpenAIRaw(options, apiKey!, model);
+        
+        case 'anthropic':
+          return await this.callAnthropicRaw(options, apiKey!, model);
+        
+        case 'google':
+          return await this.callGoogleRaw(options, apiKey!, model);
+        
+        case 'azure':
+          return await this.callAzureRaw(options, apiKey!, model);
+        
+        case 'deepseek':
+          return await this.callDeepSeekRaw(options, apiKey!, model);
+        
+        case 'ollama':
+          return await this.callOllamaRaw(options, model);
+        
+        default:
+          throw new AIError(
+            'UNSUPPORTED_PROVIDER',
+            `Raw API calls not supported for provider: ${provider}`,
+            'execution'
+          );
+      }
+    } catch (error: any) {
+      logger.error(`[AI] Raw API call failed: ${error.message}`);
+      throw new AIError(
+        'API_CALL_FAILED',
+        `Raw API call failed: ${error.message}`,
+        'execution'
+      );
+    }
+  }
+
+  /**
+   * Call OpenAI raw API
+   */
+  private async callOpenAIRaw(
+    options: any,
+    apiKey: string,
+    model: string
+  ): Promise<any> {
+    const requestBody: any = {
+      model,
+      messages: options.messages,
+      temperature: options.temperature || 0.1,
+      max_tokens: options.maxTokens || 1024,
+    };
+
+    // Add response format if specified
+    if (options.responseFormat) {
+      requestBody.response_format = options.responseFormat;
+    }
+
+    // Add functions if specified
+    if (options.functions && options.functions.length > 0) {
+      requestBody.functions = options.functions;
+      requestBody.function_call = options.functionCall || 'auto';
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Call Anthropic raw API
+   */
+  private async callAnthropicRaw(
+    options: any,
+    apiKey: string,
+    model: string
+  ): Promise<any> {
+    // Anthropic has different API structure
+    const requestBody: any = {
+      model,
+      max_tokens: options.maxTokens || 1024,
+      messages: options.messages,
+      temperature: options.temperature || 0.1,
+    };
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Call Google raw API
+   */
+  private async callGoogleRaw(
+    options: any,
+    apiKey: string,
+    model: string
+  ): Promise<any> {
+    // Google Gemini API structure
+    const requestBody: any = {
+      contents: options.messages.map((msg: any) => ({
+        parts: [{ text: msg.content }],
+        role: msg.role === 'user' ? 'user' : 'model',
+      })),
+      generationConfig: {
+        temperature: options.temperature || 0.1,
+        maxOutputTokens: options.maxTokens || 1024,
+      },
+    };
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Google API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Call Azure OpenAI raw API
+   */
+  private async callAzureRaw(
+    options: any,
+    apiKey: string,
+    model: string
+  ): Promise<any> {
+    const endpoint = this.config?.endpoint || 'https://YOUR_RESOURCE.openai.azure.com';
+    const apiVersion = this.config?.apiVersion || '2024-02-15-preview';
+
+    const url = `${endpoint}/openai/deployments/${model}/chat/completions?api-version=${apiVersion}`;
+
+    const requestBody: any = {
+      messages: options.messages,
+      temperature: options.temperature || 0.1,
+      max_tokens: options.maxTokens || 1024,
+    };
+
+    // Azure OpenAI supports functions
+    if (options.functions && options.functions.length > 0) {
+      requestBody.functions = options.functions;
+      requestBody.function_call = options.functionCall || 'auto';
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Azure OpenAI API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Call DeepSeek raw API
+   */
+  private async callDeepSeekRaw(
+    options: any,
+    apiKey: string,
+    model: string
+  ): Promise<any> {
+    const requestBody: any = {
+      model,
+      messages: options.messages,
+      temperature: options.temperature || 0.1,
+      max_tokens: options.maxTokens || 1024,
+    };
+
+    // DeepSeek supports response format
+    if (options.responseFormat) {
+      requestBody.response_format = options.responseFormat;
+    }
+
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Call Ollama raw API
+   */
+  private async callOllamaRaw(
+    options: any,
+    model: string
+  ): Promise<any> {
+    const endpoint = this.config?.endpoint || 'http://localhost:11434';
+
+    // Ollama has different API structure
+    const requestBody: any = {
+      model,
+      prompt: options.messages[options.messages.length - 1]?.content || '',
+      stream: false,
+      options: {
+        temperature: options.temperature || 0.1,
+        num_predict: options.maxTokens || 1024,
+      },
+    };
+
+    const response = await fetch(`${endpoint}/api/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
    * Reset configuration
    */
   reset(): void {

@@ -32,6 +32,21 @@ export { ConfigManager } from './core/config-manager';
 // Export AI functionality (optional)
 export { SimpleAI } from './ai/ai';
 
+// Export Cloud Intent Engine functionality
+export {
+  CloudIntentEngine,
+  type CloudIntentEngineConfig,
+  type AtomicIntent,
+  type DependencyEdge,
+  type IntentParseResult,
+  type ToolSelectionResult,
+  type ExecutionContext,
+  type ExecutionResult,
+  type EnhancedExecutionStep,
+  type WorkflowPlan,
+  type EnhancedExecutionResult,
+} from './ai';
+
 // Export MCP functionality
 export {
   MCPClient,

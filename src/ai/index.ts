@@ -8,6 +8,22 @@ export { SimpleAI, AIError, type SimpleAIConfig, type AskResult, type ToolCall }
 export { SimpleAIConfigManager } from './config';
 export { SimpleAICommand } from './command';
 
+// Export Cloud LLM Intent Engine
+export { 
+  CloudIntentEngine, 
+  type CloudIntentEngineConfig,
+  type AtomicIntent,
+  type DependencyEdge,
+  type IntentParseResult,
+  type ToolSelectionResult,
+  type ExecutionContext,
+  type ExecutionResult,
+  // Enhanced types for user access
+  type EnhancedExecutionStep,
+  type WorkflowPlan,
+  type EnhancedExecutionResult
+} from './cloud-intent-engine';
+
 // Legacy exports (for backward compatibility)
 export { EnhancedIntentEngine } from './enhanced-intent';
 export { IntentEngine } from './intent';
