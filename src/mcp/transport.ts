@@ -373,9 +373,21 @@ export class StdioTransport extends BaseTransport {
       // Dynamically import child_process to avoid errors in non-Node.js environments
       const { spawn } = await import('child_process');
 
-      this.process = spawn(this.config.command!, this.config.args || [], {
+      const spawnOptions: any = {
         stdio: ['pipe', 'pipe', 'pipe'],
-      });
+      };
+
+      // Add optional env if provided
+      if (this.config.env) {
+        spawnOptions.env = { ...process.env, ...this.config.env };
+      }
+
+      // Add optional cwd if provided
+      if (this.config.cwd) {
+        spawnOptions.cwd = this.config.cwd;
+      }
+
+      this.process = spawn(this.config.command!, this.config.args || [], spawnOptions);
 
       // Set up stdout reader
       this.process.stdout?.on('data', (data: Buffer) => {

@@ -66,15 +66,21 @@ async function runExamples() {
     console.log('   MCP functionality initialized');
     
     // List MCP servers (may be empty depending on environment)
-    const servers = mcpilot.listMCPServers();
-    console.log(`2. Current MCP server count: ${servers.length}`);
+    const serverNames = mcpilot.listMCPServers();
+    console.log(`2. Current MCP server count: ${serverNames.length}`);
     
-    if (servers.length > 0) {
-      console.log('   Server list:', servers);
+    if (serverNames.length > 0) {
+      console.log('   Server names:', serverNames);
       
       // Get status of first server
-      const status = mcpilot.getMCPServerStatus(servers[0]);
-      console.log(`3. Server "${servers[0]}" status:`, status);
+      const status = mcpilot.getMCPServerStatus(serverNames[0]);
+      if (status) {
+        console.log(`3. Server "${serverNames[0]}" status:`);
+        console.log(`   - Connected: ${status.connected}`);
+        console.log(`   - Tools count: ${status.toolsCount}`);
+      } else {
+        console.log(`3. Server "${serverNames[0]}" not found or not connected`);
+      }
     }
     
     console.log('✅ MCP functionality test passed\n');

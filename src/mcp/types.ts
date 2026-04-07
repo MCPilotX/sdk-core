@@ -119,6 +119,9 @@ export interface TransportConfig {
   headers?: Record<string, string>; // For http/sse
   // Log filter configuration specific to stdio transport
   logFilter?: StdioLogFilterConfig;
+  // Additional spawn options for stdio transport
+  env?: Record<string, string>;
+  cwd?: string;
 }
 
 // ==================== Client Configuration ====================

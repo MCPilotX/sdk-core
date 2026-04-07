@@ -1,7 +1,7 @@
 {
   "name": "@mcpilotx/intentorch",
   "version": "0.5.0",
-  "description": "Core SDK for MCP service orchestration - Developer-focused, simple and elegant",
+  "description": "Intent-Driven MCP Orchestration Toolkit - Transform natural language into executable workflows with AI-powered intent parsing",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",

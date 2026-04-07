@@ -260,7 +260,8 @@ export class MCPClient extends EventEmitter {
         this.pendingRequests.delete(response.id);
 
         if (response.error) {
-          const error = new Error(response.error.message);
+          const errorMessage = response.error.message || 'Unknown error';
+          const error = new Error(errorMessage);
           (error as any).code = response.error.code;
           (error as any).data = response.error.data;
           reject(error);
