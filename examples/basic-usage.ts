@@ -1,12 +1,13 @@
 /**
- * MCPilot SDK Basic Usage Example
+ * IntentOrch SDK Basic Usage Example
  * Developers can run this example to test SDK functionality
+ * Formerly known as MCPilot SDK
  */
 
-import { mcpilot, MCPilotSDK } from '../src/index';
+import { mcpilot, intentorch, MCPilotSDK, IntentOrchSDK } from '../src/index';
 
 async function runExamples() {
-  console.log('🚀 MCPilot SDK Basic Usage Example\n');
+  console.log('🚀 IntentOrch SDK Basic Usage Example\n');
 
   // ==================== Example 1: Using Singleton Instance ====================
   

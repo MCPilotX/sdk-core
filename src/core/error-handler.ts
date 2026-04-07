@@ -1,6 +1,7 @@
 /**
- * MCPilot SDK Unified Error Handling System
+ * IntentOrch SDK Unified Error Handling System
  * Balances minimalist style with functional robustness
+ * Formerly known as MCPilot SDK
  */
 
 /**
@@ -104,9 +105,9 @@ export interface ErrorSuggestion {
 }
 
 /**
- * MCPilot Unified Error Class
+ * IntentOrch Unified Error Class
  */
-export class MCPilotError extends Error {
+export class IntentOrchError extends Error {
   constructor(
     public code: ErrorCode,
     override message: string,
@@ -116,7 +117,7 @@ export class MCPilotError extends Error {
     public override cause?: Error,
   ) {
     super(message);
-    this.name = 'MCPilotError';
+    this.name = 'IntentOrchError';
 
     // Ensure stack trace includes original error
     if (cause && cause.stack) {
@@ -141,7 +142,7 @@ export class MCPilotError extends Error {
       context: this.context,
       suggestions: this.suggestions,
       stack: this.stack,
-      cause: this.cause ? (this.cause instanceof MCPilotError ? this.cause.toJSON() : {
+      cause: this.cause ? (this.cause instanceof IntentOrchError ? this.cause.toJSON() : {
         name: this.cause.name,
         message: this.cause.message,
         stack: this.cause.stack,
@@ -187,6 +188,24 @@ export class MCPilotError extends Error {
 }
 
 /**
+ * MCPilot Unified Error Class (for backward compatibility)
+ * @deprecated Use IntentOrchError instead
+ */
+export class MCPilotError extends IntentOrchError {
+  constructor(
+    code: ErrorCode,
+    message: string,
+    severity: ErrorSeverity = ErrorSeverity.MEDIUM,
+    context: ErrorContext = {},
+    suggestions: ErrorSuggestion[] = [],
+    cause?: Error,
+  ) {
+    super(code, message, severity, context, suggestions, cause);
+    this.name = 'MCPilotError';
+  }
+}
+
+/**
  * Error Factory - Create standardized error instances
  */
 export class ErrorFactory {
@@ -209,7 +228,7 @@ export class ErrorFactory {
             'Confirm all required fields are filled',
             'Refer to configuration examples in documentation',
           ],
-          documentationUrl: 'https://github.com/MCPilotX/mcpilot/docs/configuration',
+          documentationUrl: 'https://github.com/MCPilotX/IntentOrch/docs/configuration',
         },
       ],
       cause,
@@ -361,7 +380,7 @@ export class ErrorFactory {
             'Consider using alternative solutions',
             'Submit feature request (if urgently needed)',
           ],
-          documentationUrl: 'https://github.com/MCPilotX/mcpilot/issues',
+          documentationUrl: 'https://github.com/MCPilotX/IntentOrch/issues',
         },
       ],
     );
@@ -432,7 +451,7 @@ export class ErrorHandler {
       );
 
     // Log error
-    console.error(`[MCPilot Error] ${mcError.getSummary()}`);
+    console.error(`[IntentOrch Error] ${mcError.getSummary()}`);
 
     // Execute all registered handlers
     for (const handler of this.handlers) {
@@ -488,7 +507,7 @@ export class ConsoleErrorHandler {
     const reset = '\x1b[0m';
 
     console.error(`\n${color}╔══════════════════════════════════════════════════════════════╗${reset}`);
-    console.error(`${color}║ MCPilot Error: ${error.getSummary().padEnd(50)} ║${reset}`);
+    console.error(`${color}║ IntentOrch Error: ${error.getSummary().padEnd(48)} ║${reset}`);
     console.error(`${color}╚══════════════════════════════════════════════════════════════╝${reset}`);
 
     console.error(`\n${color}Details:${reset}`);
@@ -509,9 +528,9 @@ export class ConsoleErrorHandler {
     }
 
     console.error(`\n${color}Need more help?${reset}`);
-    console.error('  • Check documentation: https://github.com/MCPilotX/mcpilot/docs');
-    console.error('  • Report issue: https://github.com/MCPilotX/mcpilot/issues');
-    console.error('  • Ask community: https://github.com/MCPilotX/mcpilot/discussions\n');
+    console.error('  • Check documentation: https://github.com/MCPilotX/IntentOrch/docs');
+    console.error('  • Report issue: https://github.com/MCPilotX/IntentOrch/issues');
+    console.error('  • Ask community: https://github.com/MCPilotX/IntentOrch/discussions\n');
   }
 }
 

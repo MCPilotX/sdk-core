@@ -1,6 +1,7 @@
 /**
- * MCPilot SDK - Minimalist Core Class
+ * IntentOrch SDK - Minimalist Core Class
  * Designed for developers, pursuing minimalist style
+ * Formerly known as MCPilot SDK
  */
 
 import { ConfigManager } from './core/config-manager';
@@ -71,10 +72,10 @@ export interface AskResult {
 }
 
 /**
- * MCPilot SDK Core Class
+ * IntentOrch SDK Core Class
  * Provides unified API interface, designed for developers
  */
-export class MCPilotSDK {
+export class IntentOrchSDK {
   private configManager: ConfigManager;
   private initialized = false;
   private logger: SDKOptions['logger'];
@@ -126,7 +127,7 @@ export class MCPilotSDK {
       this.registerRuntimeAdapters();
 
       this.initialized = true;
-      this.logger.info('MCPilot SDK initialized successfully');
+      this.logger.info('IntentOrch SDK initialized successfully');
     } catch (error) {
       this.logger.error(`Failed to initialize SDK: ${error}`);
       throw error;
@@ -1336,8 +1337,20 @@ export class MCPilotSDK {
   }
 }
 
-// Export singleton instance
+/**
+ * MCPilot SDK Core Class (for backward compatibility)
+ * Provides unified API interface, designed for developers
+ * @deprecated Use IntentOrchSDK instead. This class is kept for backward compatibility.
+ */
+export class MCPilotSDK extends IntentOrchSDK {
+  constructor(options: SDKOptions = {}) {
+    super(options);
+  }
+}
+
+// Export singleton instances (with backward compatibility)
 export const mcpilot = new MCPilotSDK({ autoInit: true });
+export const intentorch = mcpilot; // Alias for new name
 
 // Export types
 export type { ServiceConfig, RuntimeType, Config } from './core/types';

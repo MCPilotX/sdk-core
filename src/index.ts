@@ -1,11 +1,12 @@
-import { SDKOptions, MCPilotSDK, mcpilot } from './sdk';
+import { SDKOptions, MCPilotSDK, IntentOrchSDK, mcpilot, intentorch } from './sdk';
 /**
- * MCPilot SDK Core - Main Entry File
+ * IntentOrch SDK Core - Main Entry File
  * Exports all public APIs, designed for developers
+ * Formerly known as MCPilot SDK
  */
 
-// Export core SDK class and types
-export { MCPilotSDK, mcpilot } from './sdk';
+// Export core SDK class and types (with backward compatibility)
+export { MCPilotSDK, IntentOrchSDK, mcpilot, intentorch } from './sdk';
 export type {
   SDKOptions,
   ServiceStatus,
@@ -86,6 +87,7 @@ export { logger } from './core/logger';
 // Export error handling
 export {
   MCPilotError,
+  IntentOrchError,
   ErrorCode,
   ErrorSeverity,
   ErrorFactory,
