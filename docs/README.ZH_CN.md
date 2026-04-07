@@ -540,6 +540,6 @@ console.log(future.answer);
 
 ---
 
-**由MCPilot团队用 ❤️ 构建**
+**由IntentOrch团队用 ❤️ 构建**
 
 *IntentOrch：意图与执行的交汇点。*
