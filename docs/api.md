@@ -2,19 +2,21 @@
 
 ## Overview
 
-MCPilot SDK Core provides a concise and elegant API for MCP (Model Context Protocol) service orchestration. This document details all public APIs of the SDK.
+IntentOrch SDK Core provides a concise and elegant API for MCP (Model Context Protocol) service orchestration. This document details all public APIs of the SDK.
 
 ## Core Classes
 
-### `MCPilotSDK`
+### `IntentOrchSDK` (formerly `MCPilotSDK`)
 
 The main SDK class that provides all functionality.
 
 ```typescript
-import { MCPilotSDK } from '@mcpilotx/intentorch';
+import { IntentOrchSDK } from '@mcpilotx/intentorch';
 
-const sdk = new MCPilotSDK(options);
+const sdk = new IntentOrchSDK(options);
 ```
+
+**Note:** For backward compatibility, `MCPilotSDK` is still available as an alias.
 
 #### Constructor Options
 

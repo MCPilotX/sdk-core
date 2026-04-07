@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档为 MCPilot SDK Core 的开发者提供详细的开发指南，包括环境设置、代码结构、开发流程、测试和贡献指南。
+本文档为 IntentOrch SDK Core 的开发者提供详细的开发指南，包括环境设置、代码结构、开发流程、测试和贡献指南。
 
 ## 开发环境设置
 
@@ -18,8 +18,8 @@
 1. **克隆仓库**
 
 ```bash
-git clone https://github.com/MCPilotX/mcpilot.git
-cd mcpilot/packages/intentorch
+git clone https://github.com/MCPilotX/IntentOrch.git
+cd IntentOrch
 ```
 
 2. **安装依赖**

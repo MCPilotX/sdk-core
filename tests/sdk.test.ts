@@ -1,4 +1,4 @@
-import { MCPilotSDK, mcpilot } from '../src/sdk';
+import { MCPilotSDK, IntentOrchSDK, mcpilot, intentorch } from '../src/sdk';
 import { ConfigManager } from '../src/core/config-manager';
 import { RuntimeAdapterRegistry } from '../src/runtime/adapter-advanced';
 import { EnhancedRuntimeDetector } from '../src/runtime/detector-advanced';
@@ -12,8 +12,8 @@ jest.mock('../src/runtime/detector-advanced');
 jest.mock('../src/mcp');
 jest.mock('../src/ai/ai');
 
-describe('MCPilotSDK', () => {
-  let sdk: MCPilotSDK;
+describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
+  let sdk: IntentOrchSDK;
   let mockLogger: any;
 
   beforeEach(() => {
@@ -53,7 +53,7 @@ describe('MCPilotSDK', () => {
     (SimpleAI as unknown as jest.Mock).mockImplementation(() => mockSimpleAI);
 
     // Create SDK instance
-    sdk = new MCPilotSDK({
+    sdk = new IntentOrchSDK({
       logger: mockLogger,
       autoInit: false,
     });
@@ -90,7 +90,7 @@ describe('MCPilotSDK', () => {
       sdk.init();
       
       expect(mockConfigManagerInit).toHaveBeenCalled();
-      expect(mockLogger.info).toHaveBeenCalledWith('MCPilot SDK initialized successfully');
+      expect(mockLogger.info).toHaveBeenCalledWith('IntentOrch SDK initialized successfully');
     });
 
     it('should not re-initialize if already initialized', () => {

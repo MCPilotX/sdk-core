@@ -2,16 +2,16 @@
 
 ## Overview
 
-MCPilot SDK Core is an MCP (Model Context Protocol) service orchestration SDK designed for developers. This document details the SDK's architecture design, core components, and design principles.
+IntentOrch SDK Core is an MCP (Model Context Protocol) service orchestration SDK designed for developers. This document details the SDK's architecture design, core components, and design principles.
 
 ## Architecture Overview
 
 ### Overall Architecture
 
 ```
-MCPilot SDK Core
+IntentOrch SDK Core
 ├── Core Layer
-│   ├── SDK Main Class (MCPilotSDK)
+│   ├── SDK Main Class (IntentOrchSDK, formerly MCPilotSDK)
 │   ├── Configuration Manager (ConfigManager)
 │   ├── Logging System (Logger)
 │   ├── Error Handling (ErrorHandler)
