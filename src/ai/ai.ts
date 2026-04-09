@@ -30,12 +30,34 @@ export interface AIConfig {
 
 // Query result
 export interface AskResult {
-  type: 'tool_call' | 'suggestions' | 'error';
+  type: 'tool_call' | 'suggestions' | 'text_response' | 'error';
   tool?: ToolCall;
   suggestions?: string[];
   message?: string;
   help?: string;
   confidence?: number;
+  text?: string;           // AI generated text content
+  reasoning?: string;      // AI reasoning process
+  metadata?: Record<string, any>;
+}
+
+// Text generation result
+export interface TextResult {
+  type: 'text';
+  text: string;
+  tokensUsed?: number;
+  reasoning?: string;
+  metadata?: Record<string, any>;
+}
+
+// Intent parsing result
+export interface IntentResult {
+  type: 'tool_call' | 'suggestion' | 'error';
+  tool?: ToolCall;
+  suggestions?: string[];
+  confidence: number;
+  reasoning?: string;
+  metadata?: Record<string, any>;
 }
 
 // Tool call (MCP standard format)
@@ -586,6 +608,72 @@ export class AI {
   }
 
   /**
+   * Generate text response using AI
+   */
+  async generateText(query: string, options?: {
+    temperature?: number;
+    maxTokens?: number;
+    systemPrompt?: string;
+  }): Promise<string> {
+    logger.info(`[AI] Generating text for query: "${query}"`);
+
+    // Check if AI is enabled
+    if (!this.enabled || !this.config || this.config.provider === 'none') {
+      throw new AIError(
+        'AI_NOT_CONFIGURED',
+        'AI provider not configured. Please call configureAI() with a valid API key.',
+        'config',
+        [
+          'Run: mcpilot.configureAI({ provider: "openai", apiKey: "YOUR_API_KEY" })',
+          'Get OpenAI API key: https://platform.openai.com/api-keys',
+          'Or use Ollama: mcpilot.configureAI({ provider: "ollama", endpoint: "http://localhost:11434" })',
+        ],
+      );
+    }
+
+    try {
+      const response = await this.callRawAPI({
+        messages: [
+          {
+            role: 'system',
+            content: options?.systemPrompt || 'You are a helpful AI assistant.',
+          },
+          {
+            role: 'user',
+            content: query,
+          },
+        ],
+        temperature: options?.temperature || 0.7,
+        maxTokens: options?.maxTokens || 2000,
+      });
+
+      // Extract text from response based on provider
+      if (response.choices && response.choices[0]?.message?.content) {
+        // OpenAI, Azure, DeepSeek format
+        return response.choices[0].message.content;
+      } else if (response.content && response.content[0]?.text) {
+        // Anthropic format
+        return response.content[0].text;
+      } else if (response.candidates && response.candidates[0]?.content?.parts?.[0]?.text) {
+        // Google format
+        return response.candidates[0].content.parts[0].text;
+      } else if (response.response) {
+        // Ollama format
+        return response.response;
+      } else {
+        throw new Error('Unexpected response format from AI provider');
+      }
+    } catch (error: any) {
+      logger.error(`[AI] Text generation failed: ${error.message}`);
+      throw new AIError(
+        'TEXT_GENERATION_FAILED',
+        `Text generation failed: ${error.message}`,
+        'execution',
+      );
+    }
+  }
+
+  /**
    * Parse intent from natural language query (synchronous version)
    * This is the core intent parsing logic used by both sync and async methods
    */
@@ -1027,7 +1115,7 @@ export class AI {
    * Returns a ToolCall that can be executed by ToolRegistry.executeTool()
    * Uses ToolMappingManager for flexible tool name mapping
    */
-  private mapIntentToTool(intent: Intent): ToolCall {
+  mapIntentToTool(intent: Intent): ToolCall {
     // Try to find tool mapping for this intent
     const mapping = toolMappingManager.findMapping(intent.action, intent.target);
     

@@ -169,7 +169,7 @@ export class AICommand {
     console.log(chalk.blue(`🤖 Query: "${query}"`));
 
     try {
-      const result = await this.ai.ask(query);
+      const result = await this.ai.generateText(query);
       await this.handleAskResult(result);
 
     } catch (error: any) {
@@ -211,6 +211,16 @@ export class AICommand {
           result.suggestions.forEach((suggestion, i) => {
             console.log(`  ${i + 1}. ${suggestion}`);
           });
+        }
+        break;
+
+      case 'text_response':
+      case 'text':
+        console.log(chalk.green('🤖 AI Response:'));
+        console.log(chalk.white(result.text || result.message || ''));
+        if (result.reasoning) {
+          console.log(chalk.gray('\n💭 Reasoning:'));
+          console.log(chalk.gray(result.reasoning));
         }
         break;
 

@@ -79,9 +79,11 @@ describe('Integration Tests', () => {
       });
 
       // Assert
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('is not valid');
-      expect(result.content[0].text).toContain('add, subtract, multiply, divide');
+      // Note: In COMPATIBLE mode (default), enum validation only generates warnings, not errors
+      // So the tool execution should succeed
+      expect(result.isError).toBe(false);
+      // The executor should have been called with the original value
+      expect(executor).toHaveBeenCalledWith({ a: 10, b: 5, operation: 'invalid-op' });
     });
 
     test('should provide helpful suggestions for similar tool names', async () => {

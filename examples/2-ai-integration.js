@@ -37,7 +37,7 @@ async function runAIExamples() {
       });
       
       // SimpleAI has ask() method, not chat()
-      const response = await simpleAI.ask('Hello! Introduce yourself briefly.');
+      const response = await simpleAI.generateText('Hello! Introduce yourself briefly.');
       console.log('✅ AI Response:', response.message?.substring(0, 150) || 'No response');
     } catch (error) {
       console.log('⚠ Chat test skipped:', error.message);
@@ -55,7 +55,7 @@ async function runAIExamples() {
         model: 'deepseek-chat'
       });
       
-      const codingResponse = await aiWithSystem.ask('Explain JavaScript closures in one sentence.');
+      const codingResponse = await aiWithSystem.generateText('Explain JavaScript closures in one sentence.');
       console.log('✅ Coding Response:', codingResponse.message || 'No response');
     } catch (error) {
       console.log('⚠ System prompt test skipped:', error.message);

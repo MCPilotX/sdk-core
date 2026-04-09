@@ -2,7 +2,7 @@
  * Test utilities for MCPilot SDK Core tests
  */
 
-import { MCPilotSDK } from '../src/sdk';
+import { IntentOrchSDK } from '../src/sdk';
 import { ToolResult } from '../src/mcp/types';
 import { RuntimeType } from '../src/core/types';
 
@@ -13,8 +13,8 @@ export function createMockSDK(options: {
   autoInit?: boolean;
   hasTools?: boolean;
   hasAI?: boolean;
-} = {}): MCPilotSDK {
-  const sdk = new MCPilotSDK({ autoInit: false });
+} = {}): IntentOrchSDK {
+  const sdk = new IntentOrchSDK({ autoInit: false });
   
   // Mock internal components
   const mockToolRegistry = {

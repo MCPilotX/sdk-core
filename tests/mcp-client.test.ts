@@ -86,10 +86,6 @@ describe('MCPClient', () => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
   describe('Initialization', () => {
     test('should create client with config', () => {
       // Assert
@@ -530,6 +526,263 @@ describe('MCPClient', () => {
 
       // Act & Assert
       await expect(shortTimeoutClient.listTools()).rejects.toThrow();
+    });
+  });
+
+  describe('Connection Edge Cases', () => {
+    it('should not connect if already connected', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      (client as any).connected = true;
+
+      // Act
+      await client.connect();
+
+      // Assert - should not throw and transport.connect should not be called
+      expect(mockTransport.connect).not.toHaveBeenCalled();
+    });
+
+    it('should handle connection errors', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      const error = new Error('Connection failed');
+      mockTransport.connect.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(client.connect()).rejects.toThrow('Connection failed');
+      expect((client as any).connected).toBe(false);
+    });
+
+    it('should auto-refresh tools, resources and prompts when autoConnect is true', async () => {
+      // Arrange
+      const autoConnectConfig: MCPClientConfig = {
+        ...config,
+        autoConnect: true,
+      };
+      const client = new MCPClient(autoConnectConfig);
+      
+      // Mock the refresh methods
+      (client as any).refreshTools = jest.fn().mockResolvedValue(undefined);
+      (client as any).refreshResources = jest.fn().mockResolvedValue(undefined);
+      (client as any).refreshPrompts = jest.fn().mockResolvedValue(undefined);
+
+      mockTransport.connect.mockResolvedValue(undefined);
+
+      // Act
+      await client.connect();
+
+      // Assert
+      expect(mockTransport.connect).toHaveBeenCalled();
+      expect((client as any).refreshTools).toHaveBeenCalled();
+      expect((client as any).refreshResources).toHaveBeenCalled();
+      expect((client as any).refreshPrompts).toHaveBeenCalled();
+    });
+
+    it('should not auto-refresh when autoConnect is false', async () => {
+      // Arrange
+      const noAutoConnectConfig: MCPClientConfig = {
+        ...config,
+        autoConnect: false,
+      };
+      const client = new MCPClient(noAutoConnectConfig);
+      
+      // Mock the refresh methods
+      (client as any).refreshTools = jest.fn().mockResolvedValue(undefined);
+      (client as any).refreshResources = jest.fn().mockResolvedValue(undefined);
+      (client as any).refreshPrompts = jest.fn().mockResolvedValue(undefined);
+
+      mockTransport.connect.mockResolvedValue(undefined);
+
+      // Act
+      await client.connect();
+
+      // Assert
+      expect(mockTransport.connect).toHaveBeenCalled();
+      expect((client as any).refreshTools).not.toHaveBeenCalled();
+      expect((client as any).refreshResources).not.toHaveBeenCalled();
+      expect((client as any).refreshPrompts).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Disconnection Edge Cases', () => {
+    it('should not disconnect if not connected', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      (client as any).connected = false;
+
+      // Act
+      await client.disconnect();
+
+      // Assert
+      expect(mockTransport.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('should handle disconnection errors', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      (client as any).connected = true;
+      const error = new Error('Disconnection failed');
+      mockTransport.disconnect.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(client.disconnect()).rejects.toThrow('Disconnection failed');
+      expect((client as any).connected).toBe(false);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should emit error event on connection failure', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      const error = new Error('Connection failed');
+      const errorListener = jest.fn();
+      client.on('error', errorListener);
+
+      mockTransport.connect.mockRejectedValue(error);
+
+      // Act
+      try {
+        await client.connect();
+      } catch (e) {
+        // Expected to throw
+      }
+
+      // Assert
+      expect(errorListener).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'error',
+        data: error,
+        timestamp: expect.any(Number)
+      }));
+    });
+
+    it('should clean up pending requests on disconnection', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      (client as any).connected = true;
+      (client as any).pendingRequests = new Map();
+      (client as any).pendingRequests.set('request-1', { reject: jest.fn() });
+      (client as any).pendingRequests.set('request-2', { reject: jest.fn() });
+
+      mockTransport.disconnect.mockResolvedValue(undefined);
+
+      // Act
+      await client.disconnect();
+
+      // Assert
+      expect((client as any).pendingRequests.size).toBe(0);
+      expect(mockTransport.disconnect).toHaveBeenCalled();
+    });
+  });
+
+  describe('Resource and Prompt Management', () => {
+    it('should handle resource refresh errors', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      const error = new Error('Resource refresh failed');
+      
+      // Connect client first
+      mockTransport.connect.mockResolvedValue(undefined);
+      await client.connect();
+      (client as any).connected = true;
+      mockTransport.isConnected.mockReturnValue(true);
+      
+      mockTransport.send.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(client.refreshResources()).rejects.toThrow('Resource refresh failed');
+    });
+
+    it('should handle prompt refresh errors', async () => {
+      // Arrange
+      const client = new MCPClient(config);
+      const error = new Error('Prompt refresh failed');
+      
+      // Connect client first
+      mockTransport.connect.mockResolvedValue(undefined);
+      await client.connect();
+      (client as any).connected = true;
+      mockTransport.isConnected.mockReturnValue(true);
+      
+      mockTransport.send.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(client.refreshPrompts()).rejects.toThrow('Prompt refresh failed');
+    });
+  });
+
+  describe('Tool Execution Edge Cases', () => {
+    beforeEach(async () => {
+      // Connect before each tool execution edge case test
+      mockTransport.connect.mockResolvedValue(undefined);
+      await client.connect();
+      (client as any).connected = true;
+      mockTransport.isConnected.mockReturnValue(true);
+    });
+
+    it('should handle tool execution errors from server', async () => {
+      // Arrange
+      const toolName = 'test-tool';
+      const arguments_ = { param: 'value' };
+      const mockResult = {
+        content: [{ type: 'text', text: 'Tool execution failed: Internal server error' }],
+        isError: true
+      };
+
+      mockTransport.send.mockImplementation((request: any) => {
+        // Trigger message event with response (tool execution error)
+        setTimeout(() => {
+          mockTransport._emit('message', {
+            jsonrpc: '2.0',
+            id: request.id,
+            result: mockResult
+          });
+        }, 0);
+        
+        return Promise.resolve();
+      });
+
+      // Act & Assert
+      await expect(client.callTool(toolName, arguments_)).rejects.toThrow(
+        `Tool "${toolName}" execution failed: Tool execution failed: Internal server error`
+      );
+    });
+
+    it('should handle JSON-RPC errors from server', async () => {
+      // Arrange
+      const toolName = 'test-tool';
+      const arguments_ = { param: 'value' };
+
+      mockTransport.send.mockImplementation((request: any) => {
+        // Trigger message event with JSON-RPC error
+        setTimeout(() => {
+          mockTransport._emit('message', {
+            jsonrpc: '2.0',
+            id: request.id,
+            error: {
+              code: -32603,
+              message: 'Internal error',
+              data: { details: 'Something went wrong' }
+            }
+          });
+        }, 0);
+        
+        return Promise.resolve();
+      });
+
+      // Act & Assert
+      await expect(client.callTool(toolName, arguments_)).rejects.toThrow('Internal error');
+    });
+
+    it('should handle transport errors during tool call', async () => {
+      // Arrange
+      const toolName = 'test-tool';
+      const arguments_ = { param: 'value' };
+      const error = new Error('Transport error during tool call');
+      
+      mockTransport.send.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(client.callTool(toolName, arguments_)).rejects.toThrow('Transport error during tool call');
     });
   });
 });

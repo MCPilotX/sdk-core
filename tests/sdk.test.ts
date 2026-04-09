@@ -3,7 +3,7 @@ import { ConfigManager } from '../src/core/config-manager';
 import { RuntimeAdapterRegistry } from '../src/runtime/adapter-advanced';
 import { EnhancedRuntimeDetector } from '../src/runtime/detector-advanced';
 import { MCPClient, ToolRegistry } from '../src/mcp';
-import { SimpleAI } from '../src/ai/ai';
+import { AI } from '../src/ai/ai';
 
 // Mock dependencies
 jest.mock('../src/core/config-manager');
@@ -39,8 +39,8 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
     // Mock ToolRegistry constructor
     (ToolRegistry as any).mockImplementation(() => mockToolRegistry);
 
-    // Mock SimpleAI
-    const mockSimpleAI = {
+    // Mock AI
+    const mockAI = {
       configure: jest.fn().mockResolvedValue(undefined),
       ask: jest.fn().mockImplementation((query: string) => {
         return Promise.resolve({
@@ -50,7 +50,7 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
         });
       })
     };
-    (SimpleAI as unknown as jest.Mock).mockImplementation(() => mockSimpleAI);
+    (AI as unknown as jest.Mock).mockImplementation(() => mockAI);
 
     // Create SDK instance
     sdk = new IntentOrchSDK({
@@ -203,7 +203,7 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
       jest.spyOn(ConfigManager, 'getServiceConfig').mockReturnValue(undefined);
 
       await expect(sdk.startService('non-existent-service'))
-        .rejects.toThrow("Service 'non-existent-service' not found");
+        .rejects.toThrow('Service "non-existent-service" not found');
     });
 
     it('should throw error if runtime not specified', async () => {
@@ -213,7 +213,7 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
       });
 
       await expect(sdk.startService('test-service'))
-        .rejects.toThrow("Runtime type not specified for service 'test-service'");
+        .rejects.toThrow('Runtime type not specified for service "test-service"');
     });
 
     it('should handle errors during service start', async () => {
@@ -393,7 +393,7 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
     });
   });
 
-  describe('ask()', () => {
+  describe('generateText()', () => {
     beforeEach(() => {
       sdk.init();
     });
@@ -403,19 +403,20 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
         ai: { provider: 'openai', apiKey: 'test-key' },
       } as any);
 
-      const result = await sdk.ask('Hello, how are you?');
+      const result = await sdk.generateText('Hello, how are you?');
 
       expect(result).toEqual({
-        answer: expect.stringContaining('I received your query: "Hello, how are you?"'),
-        confidence: 0.3, // SDK sets confidence to 0.3 for 'suggestions' type
+        type: 'suggestions',
+        message: expect.stringContaining('I received your query: "Hello, how are you?"'),
+        confidence: 0.8
       });
     });
 
     it('should throw error when AI is not configured', async () => {
-      // Get the mock SimpleAI instance
-      const mockSimpleAIInstance = (SimpleAI as unknown as jest.Mock).mock.results[0].value;
+      // Get the mock AI instance
+      const mockAIInstance = (AI as unknown as jest.Mock).mock.results[0].value;
       // Make ask throw when AI is not configured
-      mockSimpleAIInstance.ask.mockImplementationOnce(() => {
+      mockAIInstance.ask.mockImplementationOnce(() => {
         throw new Error('AI provider not configured. Please call configureAI() with a valid API key.');
       });
 
@@ -423,19 +424,19 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
         ai: { provider: 'none' },
       } as any);
 
-      await expect(sdk.ask('Hello'))
+      await expect(sdk.generateText('Hello'))
         .rejects.toThrow('AI provider not configured. Please call configureAI() with a valid API key.');
     });
 
     it('should handle errors during AI query', async () => {
-      // Get the mock SimpleAI instance
-      const mockSimpleAIInstance = (SimpleAI as unknown as jest.Mock).mock.results[0].value;
+      // Get the mock AI instance
+      const mockAIInstance = (AI as unknown as jest.Mock).mock.results[0].value;
       // Make ask throw for this test
-      mockSimpleAIInstance.ask.mockImplementationOnce(() => {
+      mockAIInstance.ask.mockImplementationOnce(() => {
         throw new Error('Config error');
       });
 
-      await expect(sdk.ask('Hello'))
+      await expect(sdk.generateText('Hello'))
         .rejects.toThrow('Config error');
       
       expect(mockLogger.error).toHaveBeenCalled();

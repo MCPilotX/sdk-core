@@ -105,7 +105,7 @@ async function codeQualityChecker() {
       console.log(`\n   File: ${file.path}`);
       console.log(`   Complexity: ${result.metrics.cyclomaticComplexity}`);
       console.log(`   Maintainability: ${result.metrics.maintainabilityIndex}/100`);
-      console.log(`   Suggestion: ${result.suggestions}`);
+      console.log(`   Suggestion: ${result.text}`);
     } catch (error: any) {
       console.log(`   Error analyzing ${file.path}: ${error.message}`);
     }

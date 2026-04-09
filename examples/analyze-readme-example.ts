@@ -34,7 +34,7 @@ async function analyzeReadmeExample() {
     console.log('\n2. 使用ask方法分析README文件...');
     try {
       // 正确的用法：ask方法只接受查询字符串和可选的AskOptions参数
-      const analysis = await mcpilot.ask(
+      const analysis = await mcpilot.generateText(
         "Analyze this README file and suggest improvements",
         {
           provider: 'openai', // 可选：指定AI提供商
@@ -81,7 +81,7 @@ async function analyzeReadmeExample() {
       // 使用自定义实例进行分析
       console.log('\n2. 使用自定义实例分析...');
       try {
-        const customAnalysis = await customSDK.ask(
+        const customAnalysis = await customSDK.generateText(
           "What are the key features of this SDK based on the README?",
           { model: 'gpt-3.5-turbo' }
         );
@@ -113,7 +113,7 @@ async function analyzeReadmeExample() {
     console.log('   });');
     
     console.log('\n3. 使用ask方法的正确语法:');
-    console.log('   const result = await sdk.ask("你的查询", {');
+    console.log('   const result = await sdk.generateText("你的查询", {');
     console.log('     provider: "openai", // 可选');
     console.log('     model: "gpt-4", // 可选');
     console.log('     temperature: 0.1, // 可选');
@@ -133,16 +133,16 @@ async function analyzeReadmeExample() {
     console.log('-'.repeat(40));
     console.log('1. 使用无效的useTools参数:');
     console.log('   // 错误: useTools不是有效的AskOptions属性');
-    console.log('   await sdk.ask("query", { useTools: true });');
+    console.log('   await sdk.generateText("query", { useTools: true });');
     
     console.log('\n2. 未配置AI直接调用:');
     console.log('   // 错误: AI未配置时会抛出AIError');
     console.log('   const sdk = new MCPilotSDK();');
-    console.log('   await sdk.ask("query"); // 会失败');
+    console.log('   await sdk.generateText("query"); // 会失败');
     
     console.log('\n3. 忘记await:');
     console.log('   // 错误: ask是异步方法，需要await');
-    console.log('   const result = sdk.ask("query"); // 返回的是Promise，不是结果');
+    console.log('   const result = sdk.generateText("query"); // 返回的是Promise，不是结果');
 
   } catch (error: any) {
     console.error('\n❌ 示例运行失败:');

@@ -146,7 +146,7 @@ export class SimpleAICommand {
         }
         console.log(chalk.blue(`🤖 Query: "${query}"`));
         try {
-            const result = await this.ai.ask(query);
+            const result = await this.ai.generateText(query);
             await this.handleAskResult(result);
         }
         catch (error) {
@@ -176,9 +176,9 @@ export class SimpleAICommand {
                 if (result.help) {
                     console.log(chalk.blue(result.help));
                 }
-                if (result.suggestions && result.suggestions.length > 0) {
+                if (result.text && result.text.length > 0) {
                     console.log(chalk.green('\n🔧 Suggested commands:'));
-                    result.suggestions.forEach((suggestion, i) => {
+                    result.text.forEach((suggestion, i) => {
                         console.log(`  ${i + 1}. ${suggestion}`);
                     });
                 }

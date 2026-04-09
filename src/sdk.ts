@@ -61,6 +61,19 @@ export interface AskOptions {
   maxTokens?: number;
 }
 
+// Text generation options
+export interface GenerateTextOptions {
+  temperature?: number;
+  maxTokens?: number;
+  systemPrompt?: string;
+}
+
+// Intent parsing result (from AI module)
+export type IntentResult = import('./ai/ai').IntentResult;
+
+// Text generation result (from AI module)
+export type TextResult = import('./ai/ai').TextResult;
+
 /**
  * IntentOrch SDK Core Class
  * Provides unified API interface, designed for developers
@@ -264,7 +277,28 @@ export class IntentOrchSDK {
    */
   getConfig(): Config {
     this.ensureInitialized();
-    return ConfigManager.getGlobalConfig();
+    const config = ConfigManager.getGlobalConfig();
+    // Handle case where config is undefined
+    if (!config) {
+      return {
+        services: {},
+        ai: {
+          provider: 'none',
+          model: '',
+        },
+      };
+    }
+    // Ensure config has ai property
+    if (!config.ai) {
+      return {
+        ...config,
+        ai: {
+          provider: 'none',
+          model: '',
+        },
+      };
+    }
+    return config;
   }
 
   /**
@@ -283,23 +317,58 @@ export class IntentOrchSDK {
   }
 
   /**
-   * AI Q&A functionality (optional)
+   * Parse intent from natural language query
+   * Returns tool call or suggestions based on intent analysis
    */
-  async ask(query: string, options?: AskOptions): Promise<AskResult> {
+  async parseIntent(query: string): Promise<IntentResult> {
     this.ensureInitialized();
 
     try {
-      // Use AI instance to process query
-      // This will throw AIError if AI is not configured
-      return await this.ai.ask(query);
+      // Use AI instance to parse intent
+      const intent = await this.ai.parseIntent(query);
+      
+      // Map intent to tool call or suggestions
+      const toolCall = this.ai.mapIntentToTool(intent);
+      
+      return {
+        type: 'tool_call',
+        tool: toolCall,
+        confidence: intent.confidence,
+      };
     } catch (error) {
       // Re-throw AIError as is for clear error messages
       if (error instanceof AIError) {
         throw error;
       }
 
-      this.logger.error(`AI query failed: ${error}`);
-      throw new Error(`AI query failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Intent parsing failed: ${error}`);
+      throw new Error(`Intent parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Generate text response using AI
+   */
+  async generateText(query: string, options?: GenerateTextOptions): Promise<TextResult> {
+    this.ensureInitialized();
+
+    try {
+      // Use AI instance to generate text
+      const text = await this.ai.generateText(query, options);
+      
+      return {
+        type: 'text',
+        text,
+        tokensUsed: 0, // TODO: Extract from AI response if available
+      };
+    } catch (error) {
+      // Re-throw AIError as is for clear error messages
+      if (error instanceof AIError) {
+        throw error;
+      }
+
+      this.logger.error(`Text generation failed: ${error}`);
+      throw new Error(`Text generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -325,12 +394,12 @@ export class IntentOrchSDK {
 
       // Also update the SDK configuration
       const currentConfig = this.getConfig();
-      const currentAiConfig = currentConfig.ai;
+      const currentAiConfig = currentConfig.ai || {};
       const updatedConfig = {
         ...currentConfig,
         ai: {
-          provider: config.provider || currentAiConfig?.provider || 'none',
-          model: config.model || currentAiConfig?.model || '',
+          provider: config.provider || currentAiConfig.provider || 'none',
+          model: config.model || currentAiConfig.model || '',
           ...currentAiConfig,
           ...config,
         },

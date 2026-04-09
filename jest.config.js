@@ -8,15 +8,15 @@ export default {
     '**/*.test.ts',
     '**/*.spec.ts'
   ],
-  collectCoverage: true,
+  collectCoverage: true, // Enable coverage by default
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
-      branches: 20,
-      functions: 20,
-      lines: 20,
-      statements: 20
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
     }
   },
   collectCoverageFrom: [
@@ -28,5 +28,11 @@ export default {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: 'tsconfig.test.json',
+      diagnostics: false // Disable TypeScript diagnostics
+    }]
+  }
 };

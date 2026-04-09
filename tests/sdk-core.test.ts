@@ -2,14 +2,14 @@
  * Tests for SDK core functionality
  */
 
-import { MCPilotSDK } from '../src/sdk';
+import { IntentOrchSDK } from '../src/sdk';
 import { createMockSDK, createMockToolResult, createMockLogger } from './test-utils';
 
 describe('SDK Core Functionality', () => {
   describe('SDK Initialization', () => {
     test('should initialize with default configuration', () => {
       // Act
-      const sdk = new MCPilotSDK();
+      const sdk = new IntentOrchSDK();
       
       // Assert
       expect(sdk).toBeDefined();
@@ -21,7 +21,7 @@ describe('SDK Core Functionality', () => {
       const customLogger = createMockLogger();
       
       // Act
-      const sdk = new MCPilotSDK({
+      const sdk = new IntentOrchSDK({
         logger: customLogger,
         mcp: {
           autoDiscover: false,
@@ -36,7 +36,7 @@ describe('SDK Core Functionality', () => {
 
     test('should not auto-initialize when autoInit is false', () => {
       // Act
-      const sdk = new MCPilotSDK({ autoInit: false });
+      const sdk = new IntentOrchSDK({ autoInit: false });
       
       // Assert
       expect(sdk).toBeDefined();
@@ -258,7 +258,7 @@ describe('SDK Core Functionality', () => {
   describe('Error Handling', () => {
     test('should handle initialization errors gracefully', () => {
       // Arrange
-      const sdk = new MCPilotSDK({ autoInit: false });
+      const sdk = new IntentOrchSDK({ autoInit: false });
       
       // Mock an error during initialization by mocking ConfigManager.init
       const mockConfigManagerInit = jest.spyOn(require('../src/core/config-manager').ConfigManager, 'init').mockImplementation(() => {

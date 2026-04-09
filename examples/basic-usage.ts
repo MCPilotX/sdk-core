@@ -147,7 +147,7 @@ async function runExamples() {
     // Test AI query (may not actually call API due to test configuration)
     console.log('4. Testing AI query...');
     try {
-      const answer = await mcpilot.ask('Hello, this is a test question');
+      const answer = await mcpilot.generateText('Hello, this is a test question');
       console.log(`   AI answer: ${answer.answer}`);
       console.log(`   Confidence: ${answer.confidence}`);
     } catch (aiError) {

@@ -27,7 +27,7 @@ async function fixAskMethodExample() {
     // ==================== 用户提供的错误代码 ====================
     console.log('❌ 用户提供的错误代码:');
     console.log('-'.repeat(40));
-    console.log('const analysis = await sdk.ask(');
+    console.log('const analysis = await sdk.generateText(');
     console.log('  "Analyze this README file and suggest improvements",');
     console.log('  { useTools: true }');
     console.log(');');
@@ -53,7 +53,7 @@ async function fixAskMethodExample() {
 
     // 正确的ask方法调用
     console.log('2. 使用正确的ask方法:');
-    const analysis = await sdk.ask(
+    const analysis = await sdk.generateText(
       "Analyze this README file and suggest improvements",
       {
         // 正确的AskOptions参数（可选）:
@@ -108,7 +108,7 @@ async function fixAskMethodExample() {
     console.log('  });');
     console.log('');
     console.log('  // 3. 使用ask方法分析');
-    console.log('  const result = await sdk.ask(');
+    console.log('  const result = await sdk.generateText(');
     console.log('    "Analyze this README file and suggest improvements",');
     console.log('    {');
     console.log('      provider: "openai",');

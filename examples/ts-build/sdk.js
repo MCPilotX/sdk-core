@@ -204,7 +204,7 @@ export class MCPilotSDK {
         try {
             // Use SimpleAI instance to process query
             // This will throw AIError if AI is not configured
-            const aiResult = await this.ai.ask(query);
+            const aiResult = await this.ai.generateText(query);
             // Convert SimpleAI result to SDK AskResult format
             if (aiResult.type === 'tool_call' && aiResult.tool) {
                 return {

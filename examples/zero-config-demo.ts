@@ -61,7 +61,7 @@ async function runZeroConfigDemo() {
     // 演示AI查询（应该会失败，因为使用的是测试密钥）
     console.log('\n💬 演示AI查询:');
     try {
-      const aiResult = await mcpilot.ask('Hello, can you help me list files?');
+      const aiResult = await mcpilot.generateText('Hello, can you help me list files?');
       console.log(`  🤖 AI回答: ${aiResult.answer}`);
       console.log(`  📊 置信度: ${aiResult.confidence}`);
     } catch (error: any) {

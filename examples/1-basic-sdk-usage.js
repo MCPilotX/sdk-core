@@ -62,7 +62,7 @@ async function runBasicExamples() {
     console.log('-'.repeat(30));
     
     console.log('Common SDK methods:');
-    console.log('• ask(query) - Ask AI a question');
+    console.log('• generateText(query) - Generate text using AI');
     console.log('• configureAI(config) - Configure AI settings');
     console.log('• connectMCPServer(server) - Connect to MCP server');
     console.log('• useTool(toolName, params) - Use a tool');

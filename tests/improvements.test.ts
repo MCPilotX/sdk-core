@@ -228,8 +228,28 @@ describe('MCPilot SDK Core Improvements', () => {
     test('should list registered tools', () => {
       // Mock listTools to return test data
       const mockTools = [
-        { name: 'test-tool-1', description: 'Test tool 1', inputSchema: {} },
-        { name: 'test-tool-2', description: 'Test tool 2', inputSchema: {} }
+        { 
+          name: 'test-tool-1', 
+          description: 'Test tool 1', 
+          serverId: 'test-server-1', 
+          inputSchema: {
+            type: 'object' as const,
+            properties: {},
+            required: [],
+            additionalProperties: false
+          }
+        },
+        { 
+          name: 'test-tool-2', 
+          description: 'Test tool 2', 
+          serverId: 'test-server-2', 
+          inputSchema: {
+            type: 'object' as const,
+            properties: {},
+            required: [],
+            additionalProperties: false
+          }
+        }
       ];
       const mockListTools = jest.spyOn(sdk, 'listTools').mockReturnValue(mockTools);
 
