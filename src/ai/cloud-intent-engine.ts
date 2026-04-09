@@ -13,6 +13,8 @@
 import { logger } from '../core/logger';
 import { AI, AIError, type AIConfig } from './ai';
 import type { Tool } from '../mcp/types';
+import { ParameterMapper, ValidationLevel, type ParameterMappingRule } from '../mcp/parameter-mapper';
+import { intentorchDirectiveProcessor, type DirectiveProcessingResult } from './intentorch-directive-processor';
 
 // ==================== Type Definitions ====================
 
@@ -166,6 +168,12 @@ export interface CloudIntentEngineConfig {
     askUserOnFailure?: boolean;
     defaultTools?: Record<string, string>;  // Intent type -> default tool name
   };
+  parameterMapping?: {
+    validationLevel?: ValidationLevel;
+    enableCompatibilityMappings?: boolean;
+    logWarnings?: boolean;
+    enforceRequired?: boolean;
+  };
 }
 
 // ==================== Main Engine Class ====================
@@ -187,7 +195,7 @@ export class CloudIntentEngine {
         ...config.llm,
       },
       execution: {
-        maxConcurrentTools: 3,
+        maxConcurrentTools: 10, // Increased from 3 to allow more concurrent tools
         timeout: 60000,
         retryAttempts: 2,
         retryDelay: 1000,
@@ -217,6 +225,16 @@ export class CloudIntentEngine {
         model: this.config.llm.model,
       });
 
+      // Configure ParameterMapper if configuration is provided
+      if (this.config.parameterMapping) {
+        ParameterMapper.configure({
+          validationLevel: this.config.parameterMapping.validationLevel,
+          logWarnings: this.config.parameterMapping.logWarnings !== false,
+          enforceRequired: this.config.parameterMapping.enforceRequired !== false,
+        });
+        logger.info('[CloudIntentEngine] ParameterMapper configured successfully');
+      }
+
       logger.info('[CloudIntentEngine] Engine initialized successfully');
     } catch (error) {
       logger.error(`[CloudIntentEngine] Failed to initialize: ${error}`);
@@ -241,26 +259,43 @@ export class CloudIntentEngine {
 
   /**
    * Parse natural language instruction into atomic intents and dependencies
+   * Enhanced to support @intentorch directives
    */
   async parseIntent(query: string): Promise<IntentParseResult> {
     logger.info(`[CloudIntentEngine] Parsing intent: "${query}"`);
 
     try {
-      // Build prompt
-      const prompt = this.buildIntentParsePrompt(query);
-
-      // Call LLM to parse intent
+      // Step 1: Process @intentorch directives
+      const directiveResult = intentorchDirectiveProcessor.processQuery(query);
+      
+      // Step 2: Parse cleaned query with LLM
+      const prompt = this.buildIntentParsePrompt(directiveResult.cleanedQuery);
       const llmResponse = await this.callLLM(prompt, {
         temperature: 0.1,
         maxTokens: 1024,
       });
 
-      // Parse LLM response
-      const parsedResult = this.parseIntentResponse(llmResponse);
+      // Step 3: Parse LLM response
+      const baseResult = this.parseIntentResponse(llmResponse);
 
-      logger.info(`[CloudIntentEngine] Parsed ${parsedResult.intents.length} intents with ${parsedResult.edges.length} dependencies`);
+      // Step 4: Enhance workflow with @intentorch directives if present
+      let finalResult: IntentParseResult;
+      if (directiveResult.hasDirectives) {
+        logger.info(`[CloudIntentEngine] Enhancing workflow with ${directiveResult.directives.length} @intentorch directives`);
+        finalResult = intentorchDirectiveProcessor.enhanceWorkflowWithDirectives(
+          baseResult,
+          directiveResult.directives
+        );
+      } else {
+        finalResult = baseResult;
+      }
 
-      return parsedResult;
+      logger.info(`[CloudIntentEngine] Parsed ${finalResult.intents.length} intents with ${finalResult.edges.length} dependencies`);
+      if (directiveResult.hasDirectives) {
+        logger.info(`[CloudIntentEngine] Includes ${directiveResult.directives.length} AI summary steps from @intentorch directives`);
+      }
+
+      return finalResult;
     } catch (error) {
       logger.error(`[CloudIntentEngine] Intent parsing failed: ${error}`);
 
@@ -672,30 +707,45 @@ User instruction: "${query}"
 Please output JSON format with the following fields:
 1. "intents": Array of atomic intents, each containing:
    - "id": Unique identifier (e.g., A1, A2, A3...)
-   - "type": Short action name (e.g., open_web, search, screenshot, send_email)
+   - "type": Short action name (e.g., open_web, search, screenshot, send_email, send_to_slack, fetch_pr_details, fetch_pr_changes)
    - "description": Human-readable step description
-   - "parameters": Parameter dictionary extracted from instruction (e.g., {"url": "https://www.baidu.com", "keyword": "mcp service"})
+   - "parameters": Parameter dictionary extracted from instruction
 
 2. "edges": Array of dependency edges, each containing:
    - "from": Source intent ID
    - "to": Target intent ID
 
+IMPORTANT RULES FOR PARAMETERS:
+1. When an intent depends on the output of another intent, use variable reference format: {{intentId}} or {{intentId.field}}
+   Example: If intent A3 needs content from intent A2, use {"content": "{{A2}}"}
+   Example: If intent A4 needs summary from intent A3, use {"message": "{{A3.summary}}"} or {"report_content": "{{A3}}"}
+   
+2. NEVER use hardcoded text like "来自 A3 的输出" or "output from A3". Always use variable references.
+
+3. For send_to_slack intent type:
+   - Use {"channel": "#channel-name", "message": "{{previous_intent}}"} or {"channel": "#channel-name", "report_content": "{{previous_intent}}"}
+   - The message/report_content should reference the intent that generates the content
+
+4. For fetch_pr_details intent type:
+   - Use {"repository": "owner/repo", "pr_number": number}
+
+5. For fetch_pr_changes intent type:
+   - Use {"repository": "owner/repo", "pr_number": number}
+
 Dependencies should be inferred based on common sense (e.g., open webpage before searching, get results before taking screenshot).
 
-Example output:
+Example output for "Analyze GitHub PR and send to Slack":
 {
   "intents": [
-    {"id": "A1", "type": "open_web", "description": "Open Baidu", "parameters": {"url": "https://www.baidu.com"}},
-    {"id": "A2", "type": "search", "description": "Search for mcp service", "parameters": {"keyword": "mcp service"}},
-    {"id": "A3", "type": "extract_results", "description": "Get top 10 search results", "parameters": {"count": 10}},
-    {"id": "A4", "type": "screenshot", "description": "Take screenshot", "parameters": {}},
-    {"id": "A5", "type": "send_email", "description": "Send image to xx.com email", "parameters": {"recipient": "xx.com"}}
+    {"id": "A1", "type": "fetch_pr_details", "description": "Get PR details from GitHub", "parameters": {"repository": "facebook/react", "pr_number": 1}},
+    {"id": "A2", "type": "fetch_pr_changes", "description": "Get PR file changes", "parameters": {"repository": "facebook/react", "pr_number": 1}},
+    {"id": "A3", "type": "analyze_content", "description": "Analyze PR content and generate summary", "parameters": {"content": "{{A1}} and {{A2}}"}},
+    {"id": "A4", "type": "send_to_slack", "description": "Send analysis report to Slack", "parameters": {"channel": "#intentorch", "report_content": "{{A3}}"}}
   ],
   "edges": [
-    {"from": "A1", "to": "A2"},
+    {"from": "A1", "to": "A3"},
     {"from": "A2", "to": "A3"},
-    {"from": "A3", "to": "A4"},
-    {"from": "A4", "to": "A5"}
+    {"from": "A3", "to": "A4"}
   ]
 }
 
@@ -852,11 +902,12 @@ Output only JSON, no other content.`;
   }
 
   /**
-   * Select tool for a single intent
+   * Select tool for a single intent with enhanced error handling and fallback strategies
    */
   private async selectToolForIntent(intent: AtomicIntent): Promise<ToolSelectionResult> {
     // If tool list is empty, return default result
     if (this.availableTools.length === 0) {
+      logger.warn(`[CloudIntentEngine] No tools available for intent ${intent.id}: ${intent.description}`);
       return {
         intentId: intent.id,
         toolName: 'unknown',
@@ -866,7 +917,10 @@ Output only JSON, no other content.`;
       };
     }
 
+    // Strategy 1: Try LLM-based tool selection first
     try {
+      logger.debug(`[CloudIntentEngine] Attempting LLM-based tool selection for intent ${intent.id}`);
+      
       // Build tool selection prompt
       const prompt = this.buildToolSelectionPrompt(intent);
 
@@ -878,13 +932,57 @@ Output only JSON, no other content.`;
 
       // Parse tool selection result
       const selection = this.parseToolSelectionResponse(llmResponse, intent);
-
+      
+      // Validate the selected tool exists
+      const toolExists = this.availableTools.some(tool => tool.name === selection.toolName);
+      if (!toolExists) {
+        logger.warn(`[CloudIntentEngine] LLM selected non-existent tool '${selection.toolName}', falling back to keyword matching`);
+        throw new Error(`Tool '${selection.toolName}' not found in available tools`);
+      }
+      
+      logger.info(`[CloudIntentEngine] LLM selected tool '${selection.toolName}' for intent ${intent.id} with confidence ${selection.confidence}`);
       return selection;
     } catch (error) {
-      logger.error(`[CloudIntentEngine] Tool selection for intent ${intent.id} failed: ${error}`);
-
-      // Fallback: use keyword matching
-      return this.fallbackToolSelection(intent);
+      logger.warn(`[CloudIntentEngine] LLM tool selection failed for intent ${intent.id}: ${error}`);
+      
+      // Strategy 2: Try semantic keyword matching with improved heuristics
+      try {
+        logger.debug(`[CloudIntentEngine] Attempting semantic keyword matching for intent ${intent.id}`);
+        const semanticMatch = this.semanticToolSelection(intent);
+        if (semanticMatch.confidence > 0.5) {
+          logger.info(`[CloudIntentEngine] Semantic matching selected tool '${semanticMatch.toolName}' for intent ${intent.id} with confidence ${semanticMatch.confidence}`);
+          return semanticMatch;
+        }
+      } catch (semanticError) {
+        logger.debug(`[CloudIntentEngine] Semantic matching failed: ${semanticError}`);
+      }
+      
+      // Strategy 3: Fallback to basic keyword matching
+      logger.debug(`[CloudIntentEngine] Falling back to basic keyword matching for intent ${intent.id}`);
+      const fallbackMatch = this.fallbackToolSelection(intent);
+      
+      if (fallbackMatch.confidence > 0.3) {
+        logger.info(`[CloudIntentEngine] Keyword matching selected tool '${fallbackMatch.toolName}' for intent ${intent.id} with confidence ${fallbackMatch.confidence}`);
+        return fallbackMatch;
+      }
+      
+      // Strategy 4: Try to find any tool that can handle the intent type
+      logger.debug(`[CloudIntentEngine] Attempting intent-type based matching for intent ${intent.id}`);
+      const typeBasedMatch = this.intentTypeBasedToolSelection(intent);
+      if (typeBasedMatch.confidence > 0.2) {
+        logger.info(`[CloudIntentEngine] Type-based matching selected tool '${typeBasedMatch.toolName}' for intent ${intent.id} with confidence ${typeBasedMatch.confidence}`);
+        return typeBasedMatch;
+      }
+      
+      // Last resort: Return unknown tool with intent parameters
+      logger.warn(`[CloudIntentEngine] No suitable tool found for intent ${intent.id}: ${intent.description}`);
+      return {
+        intentId: intent.id,
+        toolName: 'unknown',
+        toolDescription: 'No suitable tool found for this intent',
+        mappedParameters: intent.parameters,
+        confidence: 0,
+      };
     }
   }
 
@@ -1022,137 +1120,305 @@ Output only JSON, no other content.`;
   }
 
   /**
-   * Enhanced parameter mapping with better handling of parameter name mismatches
+   * Semantic tool selection with improved heuristics (Generic version)
    */
-  private simpleParameterMapping(intentParams: Record<string, any>, tool: Tool): Record<string, any> {
-    const mapped: Record<string, any> = {};
-    const schema = tool.inputSchema;
-
-    // Common parameter name mappings (intent param -> tool param)
-    // Also include reverse mappings for better coverage
-    const commonMappings: Record<string, string[]> = {
-      // File operations
-      'filename': ['path', 'file', 'filepath', 'filename', 'name'],
-      'path': ['path', 'filepath', 'filename', 'directory', 'name'],
-      'directory': ['directory', 'path', 'folder', 'dir', 'name'],
-      'content': ['content', 'text', 'data', 'body'],
-      'file': ['path', 'filename', 'filepath', 'name'],
-      'name': ['name', 'path', 'filename', 'filepath', 'directory'],
-
-      // Git operations
-      'repo': ['repository', 'repo', 'repo_path', 'path'],
-      'repository': ['repo', 'repository', 'path'],
-      'branch': ['branch', 'ref', 'target'],
-      'target': ['branch', 'ref', 'target'],
-      'message': ['message', 'commit_message', 'msg'],
-      'commit_message': ['message', 'commit_message', 'msg'],
-
-      // Shell operations
-      'command': ['command', 'cmd', 'shell_command'],
-      'cmd': ['command', 'cmd', 'shell_command'],
-      'args': ['args', 'arguments', 'parameters'],
-      'arguments': ['args', 'arguments', 'parameters'],
-      'parameters': ['args', 'arguments', 'parameters'],
-
-      // Web operations
-      'url': ['url', 'uri', 'link', 'address'],
-      'uri': ['url', 'uri', 'link', 'address'],
-      'method': ['method', 'http_method', 'verb'],
-      'http_method': ['method', 'http_method', 'verb'],
-      'headers': ['headers', 'http_headers'],
-      'http_headers': ['headers', 'http_headers'],
-      'body': ['body', 'data', 'content', 'payload'],
-      'data': ['body', 'data', 'content', 'payload'],
-      'payload': ['body', 'data', 'content', 'payload'],
+  private semanticToolSelection(intent: AtomicIntent): ToolSelectionResult {
+    const intentLower = intent.description.toLowerCase();
+    const intentTypeLower = intent.type.toLowerCase();
+    
+    // Generic semantic categories - no service-specific logic
+    const genericSemanticCategories: Record<string, string[]> = {
+      // Generic operation categories
+      'data_retrieval': ['get', 'fetch', 'retrieve', 'read', 'obtain', 'acquire'],
+      'data_creation': ['create', 'make', 'generate', 'write', 'add', 'insert'],
+      'data_update': ['update', 'modify', 'edit', 'change', 'adjust'],
+      'data_deletion': ['delete', 'remove', 'erase', 'clear', 'drop'],
+      'data_listing': ['list', 'show', 'display', 'enumerate', 'browse'],
+      'communication': ['send', 'post', 'message', 'notify', 'alert', 'share'],
+      'analysis': ['analyze', 'review', 'evaluate', 'assess', 'check', 'examine'],
+      'search': ['search', 'find', 'lookup', 'query', 'discover'],
+      'file_operations': ['file', 'document', 'content', 'text', 'data'],
+      'network_operations': ['url', 'web', 'http', 'network', 'connect'],
     };
-
-    // Also build a reverse lookup for tool parameter names
-    const toolParamNames = Object.keys(schema.properties);
-    const toolParamLookup = new Set(toolParamNames);
-
-    // Try to map based on parameter names
-    for (const [paramName, paramValue] of Object.entries(intentParams)) {
-      let mappedParamName: string | undefined;
-
-      // 1. Direct match (case-insensitive)
-      const directMatch = toolParamNames.find(toolParam =>
-        toolParam.toLowerCase() === paramName.toLowerCase(),
-      );
-      if (directMatch) {
-        mappedParamName = directMatch;
+    
+    // Generic action verbs
+    const genericActionVerbs = [
+      'get', 'list', 'create', 'update', 'delete', 'send', 'post', 
+      'analyze', 'generate', 'read', 'write', 'open', 'close', 'start',
+      'stop', 'run', 'execute', 'call', 'invoke', 'fetch', 'retrieve'
+    ];
+    
+    let bestMatch: { tool: Tool; score: number } | null = null;
+    
+    for (const tool of this.availableTools) {
+      let score = 0;
+      const toolNameLower = tool.name.toLowerCase();
+      const toolDescLower = tool.description.toLowerCase();
+      
+      // 1. Check if intent type is in tool name or description
+      if (toolNameLower.includes(intentTypeLower) || toolDescLower.includes(intentTypeLower)) {
+        score += 4;
       }
-      // 2. Check common mappings
-      else if (commonMappings[paramName]) {
-        for (const possibleName of commonMappings[paramName]) {
-          if (toolParamLookup.has(possibleName)) {
-            mappedParamName = possibleName;
-            break;
-          }
+      
+      // 2. Check generic semantic category matches
+      for (const [category, keywords] of Object.entries(genericSemanticCategories)) {
+        const hasIntentKeyword = keywords.some(keyword => intentLower.includes(keyword));
+        const hasToolKeyword = keywords.some(keyword => 
+          toolNameLower.includes(keyword) || toolDescLower.includes(keyword)
+        );
+        
+        if (hasIntentKeyword && hasToolKeyword) {
+          score += 3;
         }
       }
-      // 3. Try to find similar parameter name (fuzzy match with better logic)
-      if (!mappedParamName) {
-        // First, check if any tool parameter is in the common mappings for this param
-        for (const toolParam of toolParamNames) {
-          if (commonMappings[toolParam]?.includes(paramName)) {
-            mappedParamName = toolParam;
-            break;
-          }
-        }
-
-        // If still not found, try fuzzy matching
-        if (!mappedParamName) {
-          const similarParam = toolParamNames.find(toolParam => {
-            // Remove underscores and normalize
-            const normalizedToolParam = toolParam.toLowerCase().replace(/_/g, '');
-            const normalizedIntentParam = paramName.toLowerCase().replace(/_/g, '');
-
-            // Check for various similarity patterns
-            return (
-              // Exact match after normalization
-              normalizedToolParam === normalizedIntentParam ||
-              // One contains the other
-              normalizedToolParam.includes(normalizedIntentParam) ||
-              normalizedIntentParam.includes(normalizedToolParam) ||
-              // Common abbreviations
-              (paramName === 'cmd' && toolParam === 'command') ||
-              (paramName === 'uri' && toolParam === 'url') ||
-              (paramName === 'target' && toolParam === 'branch') ||
-              // Check for common suffixes
-              toolParam.toLowerCase().endsWith(paramName.toLowerCase()) ||
-              paramName.toLowerCase().endsWith(toolParam.toLowerCase()) ||
-              // Check for common prefixes
-              toolParam.toLowerCase().startsWith(paramName.toLowerCase()) ||
-              paramName.toLowerCase().startsWith(toolParam.toLowerCase())
-            );
-          });
-
-          if (similarParam) {
-            mappedParamName = similarParam;
-          }
+      
+      // 3. Check generic action verb matches
+      for (const verb of genericActionVerbs) {
+        if (intentLower.includes(verb) && (toolNameLower.includes(verb) || toolDescLower.includes(verb))) {
+          score += 2;
         }
       }
-
-      // 4. If still not found, check if we can use the parameter anyway
-      // (if additionalProperties is true or not specified)
-      if (!mappedParamName) {
-        if (schema.additionalProperties !== false) {
-          // Allow unknown parameters if additionalProperties is not explicitly false
-          mappedParamName = paramName;
-        } else {
-          // Log warning but don't fail - let tool validation handle it
-          console.warn(`Parameter "${paramName}" not found in tool schema for "${tool.name}". Tool may reject this parameter.`);
-          continue;
+      
+      // 4. Check parameter compatibility (using generic parameter mapping)
+      const intentParamKeys = Object.keys(intent.parameters);
+      if (tool.inputSchema?.properties) {
+        const toolParamKeys = Object.keys(tool.inputSchema.properties);
+        const matchingParams = intentParamKeys.filter(param => 
+          toolParamKeys.some(toolParam => 
+            param.toLowerCase() === toolParam.toLowerCase() ||
+            this.areParametersCompatibleGeneric(param, toolParam)
+          )
+        );
+        
+        if (matchingParams.length > 0) {
+          score += matchingParams.length;
         }
       }
-
-      // Map the parameter
-      if (mappedParamName) {
-        mapped[mappedParamName] = paramValue;
+      
+      // 5. Check semantic overlap between tool description and intent description
+      const intentWords = new Set(intentLower.split(/\W+/).filter(w => w.length > 2));
+      const toolDescWords = new Set(toolDescLower.split(/\W+/).filter(w => w.length > 2));
+      const overlappingWords = [...intentWords].filter(word => toolDescWords.has(word));
+      if (overlappingWords.length > 0) {
+        score += overlappingWords.length;
+      }
+      
+      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { tool, score };
       }
     }
+    
+    if (bestMatch) {
+      const normalizedScore = Math.min(bestMatch.score / 15, 0.8); // Adjust normalization factor
+      return {
+        intentId: intent.id,
+        toolName: bestMatch.tool.name,
+        toolDescription: bestMatch.tool.description,
+        mappedParameters: this.simpleParameterMapping(intent.parameters, bestMatch.tool),
+        confidence: normalizedScore,
+      };
+    }
+    
+    // No semantic match found
+    throw new Error('No semantic match found');
+  }
+  
+  /**
+   * Generic parameter compatibility check (Generic version)
+   */
+  private areParametersCompatibleGeneric(intentParam: string, toolParam: string): boolean {
+    const intentParamLower = intentParam.toLowerCase();
+    const toolParamLower = toolParam.toLowerCase();
+    
+    // 1. Direct match
+    if (intentParamLower === toolParamLower) {
+      return true;
+    }
+    
+    // 2. Generic parameter mappings
+    const genericParamMappings: Record<string, string[]> = {
+      // Data identifiers
+      'id': ['id', 'identifier', 'uid', 'uuid', 'key'],
+      'name': ['name', 'title', 'label', 'display_name'],
+      'description': ['description', 'desc', 'info', 'details'],
+      
+      // Data content
+      'content': ['content', 'text', 'body', 'data', 'message', 'value'],
+      'text': ['text', 'content', 'message', 'body', 'data'],
+      'data': ['data', 'content', 'payload', 'body', 'value'],
+      
+      // File operations
+      'file': ['file', 'path', 'filename', 'filepath', 'location'],
+      'path': ['path', 'filepath', 'directory', 'folder', 'location'],
+      'directory': ['directory', 'folder', 'path', 'location'],
+      
+      // Network operations
+      'url': ['url', 'uri', 'link', 'address', 'endpoint'],
+      'address': ['address', 'url', 'uri', 'endpoint', 'location'],
+      
+      // Search operations
+      'query': ['query', 'search', 'q', 'filter', 'term', 'keyword'],
+      'search': ['search', 'query', 'q', 'filter', 'term', 'keyword'],
+      
+      // Time related
+      'time': ['time', 'timestamp', 'date', 'datetime', 'when'],
+      'date': ['date', 'datetime', 'timestamp', 'time'],
+      
+      // Quantity related
+      'count': ['count', 'number', 'amount', 'quantity', 'total'],
+      'limit': ['limit', 'max', 'maximum', 'count', 'size'],
+    };
+    
+    // 3. Check generic mappings
+    if (genericParamMappings[intentParamLower]) {
+      return genericParamMappings[intentParamLower].includes(toolParamLower);
+    }
+    
+    // 4. Check reverse mappings
+    for (const [key, values] of Object.entries(genericParamMappings)) {
+      if (values.includes(intentParamLower) && values.includes(toolParamLower)) {
+        return true;
+      }
+    }
+    
+    // 5. Fuzzy matching
+    const normalizedIntentParam = intentParamLower.replace(/_/g, '').replace(/-/g, '');
+    const normalizedToolParam = toolParamLower.replace(/_/g, '').replace(/-/g, '');
+    
+    return (
+      // Contains relationship
+      normalizedIntentParam.includes(normalizedToolParam) ||
+      normalizedToolParam.includes(normalizedIntentParam) ||
+      // Simple edit distance
+      this.calculateSimpleSimilarity(intentParamLower, toolParamLower) > 0.7 ||
+      // Common prefix/suffix
+      intentParamLower.startsWith(toolParamLower.substring(0, 3)) ||
+      toolParamLower.startsWith(intentParamLower.substring(0, 3))
+    );
+  }
+  
+  /**
+   * Calculate simple string similarity (0-1)
+   */
+  private calculateSimpleSimilarity(str1: string, str2: string): number {
+    if (str1 === str2) return 1.0;
+    
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    // If length difference is too large, similarity is low
+    if (longer.length - shorter.length > 3) {
+      return 0.0;
+    }
+    
+    // Calculate common characters
+    let commonChars = 0;
+    for (let i = 0; i < shorter.length; i++) {
+      if (longer.includes(shorter[i])) {
+        commonChars++;
+      }
+    }
+    
+    return commonChars / longer.length;
+  }
+  
+  /**
+   * Generic intent type based tool selection
+   */
+  private intentTypeBasedToolSelection(intent: AtomicIntent): ToolSelectionResult {
+    // Generic intent type to tool pattern mappings
+    const genericIntentTypeToToolPatterns: Record<string, string[]> = {
+      // Data retrieval patterns
+      'get_data': ['get', 'fetch', 'retrieve', 'read', 'obtain'],
+      'list_data': ['list', 'show', 'display', 'enumerate', 'browse'],
+      'create_data': ['create', 'make', 'generate', 'write', 'add'],
+      'update_data': ['update', 'modify', 'edit', 'change', 'adjust'],
+      'delete_data': ['delete', 'remove', 'erase', 'clear', 'drop'],
+      
+      // Communication patterns
+      'send_message': ['send', 'post', 'message', 'notify', 'alert'],
+      'receive_message': ['receive', 'get_message', 'read_message', 'fetch_message'],
+      
+      // Analysis patterns
+      'analyze_content': ['analyze', 'review', 'evaluate', 'assess', 'check'],
+      'summarize_content': ['summarize', 'abstract', 'condense', 'extract'],
+      'generate_content': ['generate', 'create', 'write', 'compose'],
+      
+      // File operations
+      'read_file': ['read', 'get', 'fetch', 'open', 'load'],
+      'write_file': ['write', 'create', 'save', 'update', 'modify'],
+      'list_files': ['list', 'show', 'display', 'browse', 'enumerate'],
+      
+      // Network operations
+      'open_url': ['open', 'browse', 'navigate', 'visit', 'go'],
+      'fetch_url': ['fetch', 'get', 'retrieve', 'download', 'load'],
+      'search_web': ['search', 'find', 'lookup', 'query', 'discover'],
+      
+      // System operations
+      'execute_command': ['execute', 'run', 'call', 'invoke', 'start'],
+      'check_status': ['status', 'check', 'verify', 'validate', 'test'],
+    };
+    
+    // Extract base intent type (remove suffixes like _with_ai, _to_slack, etc.)
+    const baseIntentType = intent.type.replace(/_with_[a-z]+$/, '').replace(/_to_[a-z]+$/, '');
+    
+    // Get patterns for the base intent type
+    const patterns = genericIntentTypeToToolPatterns[baseIntentType] || [];
+    
+    // Also try the full intent type
+    const fullPatterns = genericIntentTypeToToolPatterns[intent.type] || [];
+    const allPatterns = [...new Set([...patterns, ...fullPatterns])];
+    
+    for (const pattern of allPatterns) {
+      const matchingTool = this.availableTools.find(tool => 
+        tool.name.toLowerCase().includes(pattern.toLowerCase()) ||
+        tool.description.toLowerCase().includes(pattern.toLowerCase())
+      );
+      
+      if (matchingTool) {
+        return {
+          intentId: intent.id,
+          toolName: matchingTool.name,
+          toolDescription: matchingTool.description,
+          mappedParameters: this.simpleParameterMapping(intent.parameters, matchingTool),
+          confidence: 0.4, // Lower confidence for type-based matching
+        };
+      }
+    }
+    
+    // Try to find any tool that mentions the intent type or base type
+    for (const tool of this.availableTools) {
+      const toolNameLower = tool.name.toLowerCase();
+      const toolDescLower = tool.description.toLowerCase();
+      
+      if (toolNameLower.includes(intent.type.toLowerCase()) ||
+          toolDescLower.includes(intent.type.toLowerCase()) ||
+          toolNameLower.includes(baseIntentType.toLowerCase()) ||
+          toolDescLower.includes(baseIntentType.toLowerCase())) {
+        return {
+          intentId: intent.id,
+          toolName: tool.name,
+          toolDescription: tool.description,
+          mappedParameters: this.simpleParameterMapping(intent.parameters, tool),
+          confidence: 0.3,
+        };
+      }
+    }
+    
+    // No type-based match found
+    throw new Error('No type-based match found');
+  }
 
-    return mapped;
+  /**
+   * Enhanced parameter mapping using ParameterMapper
+   */
+  private simpleParameterMapping(intentParams: Record<string, any>, tool: Tool): Record<string, any> {
+    // Use ParameterMapper for intelligent parameter mapping
+    return ParameterMapper.mapParameters(
+      tool.name,
+      tool.inputSchema,
+      intentParams
+    );
   }
 
   /**
@@ -1261,15 +1527,35 @@ Output only JSON, no other content.`;
 
     for (const [key, value] of Object.entries(parameters)) {
       if (typeof value === 'string') {
-        // Simple variable substitution: {{intentId.result}}
-        const varMatch = value.match(/\{\{([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\}\}/);
+        // Enhanced variable substitution with multiple formats
+        // Format 1: {{intentId.field}} - direct field access
+        // Format 2: {{intentId}} - get the entire result object
+        // Format 3: {{intentId.workflowResult}} - get workflow result
+        const varMatch = value.match(/\{\{([A-Za-z0-9_]+)(?:\.([A-Za-z0-9_]+))?\}\}/);
         if (varMatch) {
           const [, intentId, field] = varMatch;
           const result = context.results.get(intentId);
-          if (result && typeof result === 'object' && field in result) {
-            resolved[key] = result[field];
+          
+          if (result) {
+            if (!field) {
+              // If no field specified, extract the most useful content from the result
+              resolved[key] = this.extractUsefulContent(result, intentId);
+            } else if (typeof result === 'object' && field in result) {
+              // If field exists in result, return it
+              resolved[key] = result[field];
+            } else {
+              // Try to find the field in nested structures
+              const nestedValue = this.findNestedValue(result, field);
+              if (nestedValue !== undefined) {
+                resolved[key] = nestedValue;
+              } else {
+                // Keep original if substitution fails
+                resolved[key] = value;
+              }
+            }
           } else {
-            resolved[key] = value; // Keep original if substitution fails
+            // Keep original if intent result not found
+            resolved[key] = value;
           }
         } else {
           resolved[key] = value;
@@ -1283,12 +1569,137 @@ Output only JSON, no other content.`;
   }
 
   /**
+   * Find nested value in object using dot notation or common field names
+   */
+  private findNestedValue(obj: any, field: string): any {
+    if (!obj || typeof obj !== 'object') {
+      return undefined;
+    }
+
+    // Try direct access first
+    if (field in obj) {
+      return obj[field];
+    }
+
+    // Try common aliases for AI results
+    const commonAliases: Record<string, string[]> = {
+      'content': ['summary', 'markdown', 'text', 'result', 'output'],
+      'summary': ['content', 'markdown', 'text', 'result'],
+      'result': ['content', 'summary', 'output', 'workflowResult'],
+      'output': ['content', 'summary', 'result']
+    };
+
+    // Check if field has aliases
+    if (field in commonAliases) {
+      for (const alias of commonAliases[field]) {
+        if (alias in obj) {
+          return obj[alias];
+        }
+      }
+    }
+
+    // Try dot notation for nested access
+    if (field.includes('.')) {
+      const parts = field.split('.');
+      let current = obj;
+      for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+          current = current[part];
+        } else {
+          return undefined;
+        }
+      }
+      return current;
+    }
+
+    return undefined;
+  }
+
+  /**
    * Get available tools
    */
   getAvailableTools(): any[] {
     return [...this.availableTools];
   }
 
+  /**
+   * Extract useful content from result object for variable substitution
+   * This method intelligently extracts the most relevant content from different types of tool results
+   */
+  private extractUsefulContent(result: any, intentId: string): any {
+    logger.debug(`[CloudIntentEngine] extractUsefulContent called for intent ${intentId}, result type: ${typeof result}`);
+    
+    if (!result) {
+      logger.debug(`[CloudIntentEngine] Result is null or undefined`);
+      return result;
+    }
+    
+    // If result is already a string, return it
+    if (typeof result === 'string') {
+      logger.debug(`[CloudIntentEngine] Result is string, length: ${result.length}`);
+      return result;
+    }
+    
+    // If result is an object, try to extract the most useful content
+    if (typeof result === 'object') {
+      logger.debug(`[CloudIntentEngine] Result is object, keys: ${Object.keys(result).join(', ')}`);
+      
+      // Check for common result structures
+      
+      // 1. GitHub MCP tool results (content array with text)
+      if (Array.isArray(result.content) && result.content.length > 0) {
+        logger.debug(`[CloudIntentEngine] Found content array with ${result.content.length} items`);
+        const firstContent = result.content[0];
+        if (firstContent && firstContent.text) {
+          logger.debug(`[CloudIntentEngine] First content has text property, length: ${firstContent.text.length}`);
+          try {
+            // Try to parse JSON text
+            const parsed = JSON.parse(firstContent.text);
+            logger.debug(`[CloudIntentEngine] Successfully parsed JSON from text`);
+            // Return the parsed JSON object for AI analysis
+            return parsed;
+          } catch (error) {
+            logger.debug(`[CloudIntentEngine] Failed to parse JSON: ${error}`);
+            // If not JSON, return the text as-is
+            return firstContent.text;
+          }
+        }
+      }
+      
+      // 2. AI tool results (with summary or content field)
+      if (result.summary) {
+        logger.debug(`[CloudIntentEngine] Found summary field`);
+        return result.summary;
+      }
+      if (result.content && typeof result.content === 'string') {
+        logger.debug(`[CloudIntentEngine] Found string content field, length: ${result.content.length}`);
+        return result.content;
+      }
+      if (result.markdown) {
+        logger.debug(`[CloudIntentEngine] Found markdown field`);
+        return result.markdown;
+      }
+      if (result.text) {
+        logger.debug(`[CloudIntentEngine] Found text field`);
+        return result.text;
+      }
+      
+      // 3. Standardized workflow result format
+      if (result.workflowResult && result.workflowResult.content) {
+        logger.debug(`[CloudIntentEngine] Found workflowResult.content`);
+        return result.workflowResult.content;
+      }
+      
+      // 4. For other objects, return the object as-is (will be JSON.stringify'd by AI tool)
+      logger.debug(`[CloudIntentEngine] No specific content found, returning object as-is`);
+      return result;
+    }
+    
+    // For any other type, return as-is
+    logger.debug(`[CloudIntentEngine] Result is other type: ${typeof result}`);
+    return result;
+  }
+  
   /**
    * Get engine status
    */

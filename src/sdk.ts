@@ -93,6 +93,9 @@ export class IntentOrchSDK {
   private mcpClients: Map<string, MCPClient> = new Map();
   private toolRegistry: ToolRegistry = new ToolRegistry();
   private mcpOptions: SDKOptions['mcp'];
+  
+  // Tool synchronization
+  private toolUpdateCallbacks: Array<() => void> = [];
 
   constructor(options: SDKOptions = {}) {
     this.logger = options.logger || {
@@ -281,10 +284,15 @@ export class IntentOrchSDK {
     // Handle case where config is undefined
     if (!config) {
       return {
-        services: {},
+        services: {
+          autoStart: [],
+        },
         ai: {
           provider: 'none',
           model: '',
+        },
+        registry: {
+          preferred: 'npm',
         },
       };
     }
@@ -392,9 +400,12 @@ export class IntentOrchSDK {
       // Configure the AI instance
       await this.ai.configure(aiConfig);
 
+      // Register AI tools after successful configuration
+      await this.registerAITools();
+
       // Also update the SDK configuration
       const currentConfig = this.getConfig();
-      const currentAiConfig = currentConfig.ai || {};
+      const currentAiConfig = currentConfig.ai || { provider: 'none', model: '' };
       const updatedConfig = {
         ...currentConfig,
         ai: {
@@ -411,6 +422,355 @@ export class IntentOrchSDK {
       this.logger.error(`Failed to configure AI: ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Register AI tools in the tool registry
+   */
+  private async registerAITools(): Promise<void> {
+    try {
+      // Check if AI is configured
+      const aiStatus = this.ai.getStatus();
+      if (!aiStatus.configured) {
+        this.logger.info('AI not configured, skipping AI tool registration');
+        return;
+      }
+
+      // Register AI summary tool
+      this.registerAISummaryTool();
+
+      // Register AI analysis tool
+      this.registerAIAnalysisTool();
+
+      // Register AI generation tool
+      this.registerAIGenerationTool();
+
+      this.logger.info('AI tools registered successfully');
+      
+      // Sync tools to Cloud Intent Engine if initialized
+      this.syncToolsToCloudIntentEngine();
+    } catch (error) {
+      this.logger.error(`Failed to register AI tools: ${error}`);
+      // Don't throw - AI tools are optional
+    }
+  }
+
+  /**
+   * Register AI summary tool
+   */
+  private registerAISummaryTool(): void {
+    const summaryTool = {
+      name: 'ai.summary',
+      description: 'Generate Markdown-formatted summary analysis using AI',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          content: {
+            type: 'string' as const,
+            description: 'Content to analyze and summarize'
+          },
+          format: {
+            type: 'string' as const,
+            enum: ['markdown', 'text', 'html'],
+            description: 'Output format',
+            default: 'markdown'
+          },
+          analysisType: {
+            type: 'string' as const,
+            enum: ['summary', 'review', 'analysis'],
+            description: 'Type of analysis to perform',
+            default: 'summary'
+          }
+        },
+        required: ['content'] as const
+      }
+    };
+
+    const executor = async (args: Record<string, any>): Promise<any> => {
+      try {
+        const prompt = this.buildAISummaryPrompt(args.content, args.analysisType || 'summary');
+        const result = await this.ai.generateText(prompt, {
+          temperature: 0.3,
+          maxTokens: 2048
+        });
+
+        return {
+          success: true,
+          summary: result,
+          format: args.format || 'markdown',
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            analysisType: args.analysisType || 'summary'
+          }
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: `AI summary generation failed: ${errorMessage}`,
+          metadata: {
+            generatedAt: new Date().toISOString()
+          }
+        };
+      }
+    };
+
+    this.toolRegistry.registerTool(summaryTool as any, executor, 'intentorch-ai', 'IntentOrch AI Service');
+    this.logger.debug('Registered AI summary tool');
+  }
+
+  /**
+   * Register AI analysis tool
+   */
+  private registerAIAnalysisTool(): void {
+    const analysisTool = {
+      name: 'ai.analyze',
+      description: 'Perform detailed analysis of content using AI',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          content: {
+            type: 'string' as const,
+            description: 'Content to analyze'
+          },
+          analysisType: {
+            type: 'string' as const,
+            enum: ['technical', 'business', 'code', 'documentation', 'general'],
+            description: 'Type of analysis',
+            default: 'general'
+          },
+          format: {
+            type: 'string' as const,
+            enum: ['markdown', 'text', 'json'],
+            description: 'Output format',
+            default: 'markdown'
+          }
+        },
+        required: ['content'] as const
+      }
+    };
+
+    const executor = async (args: Record<string, any>): Promise<any> => {
+      try {
+        const prompt = this.buildAIAnalysisPrompt(args.content, args.analysisType || 'general');
+        const result = await this.ai.generateText(prompt, {
+          temperature: 0.3,
+          maxTokens: 2048
+        });
+
+        return {
+          success: true,
+          analysis: result,
+          format: args.format || 'markdown',
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            analysisType: args.analysisType || 'general'
+          }
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: `AI analysis failed: ${errorMessage}`,
+          metadata: {
+            generatedAt: new Date().toISOString()
+          }
+        };
+      }
+    };
+
+    this.toolRegistry.registerTool(analysisTool as any, executor, 'intentorch-ai', 'IntentOrch AI Service');
+    this.logger.debug('Registered AI analysis tool');
+  }
+
+  /**
+   * Register AI generation tool
+   */
+  private registerAIGenerationTool(): void {
+    const generationTool = {
+      name: 'ai.generate',
+      description: 'Generate content using AI',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          prompt: {
+            type: 'string' as const,
+            description: 'Prompt for content generation'
+          },
+          format: {
+            type: 'string' as const,
+            enum: ['markdown', 'text', 'html', 'json'],
+            description: 'Output format',
+            default: 'markdown'
+          },
+          length: {
+            type: 'string' as const,
+            enum: ['short', 'medium', 'long'],
+            description: 'Desired output length',
+            default: 'medium'
+          }
+        },
+        required: ['prompt'] as const
+      }
+    };
+
+    const executor = async (args: Record<string, any>): Promise<any> => {
+      try {
+        const maxTokensMap = {
+          short: 500,
+          medium: 1024,
+          long: 2048
+        };
+
+        const result = await this.ai.generateText(args.prompt, {
+          temperature: 0.7,
+          maxTokens: maxTokensMap[args.length as keyof typeof maxTokensMap] || 1024
+        });
+
+        return {
+          success: true,
+          content: result,
+          format: args.format || 'markdown',
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            length: args.length || 'medium'
+          }
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: `AI content generation failed: ${errorMessage}`,
+          metadata: {
+            generatedAt: new Date().toISOString()
+          }
+        };
+      }
+    };
+
+    this.toolRegistry.registerTool(generationTool as any, executor, 'intentorch-ai', 'IntentOrch AI Service');
+    this.logger.debug('Registered AI generation tool');
+  }
+
+  /**
+   * Build AI summary prompt
+   */
+  private buildAISummaryPrompt(content: string, analysisType: string): string {
+    const prompts = {
+      summary: `Please analyze the following content and generate a comprehensive Markdown-formatted summary report.
+
+## Content to Analyze
+${content}
+
+## Requirements
+1. Extract and highlight the key points
+2. Identify important information and patterns
+3. Provide a structured summary with clear sections
+4. Use appropriate Markdown formatting
+
+Please output only the Markdown-formatted summary, without any additional explanations.`,
+
+      review: `Please review the following content and provide a critical analysis in Markdown format.
+
+## Content to Review
+${content}
+
+## Review Requirements
+1. Identify strengths and positive aspects
+2. Point out areas for improvement or concerns
+3. Provide specific, actionable suggestions
+4. Assess overall quality and completeness
+
+Please output only the review analysis in Markdown format.`,
+
+      analysis: `Please perform a detailed analysis of the following content and present findings in Markdown format.
+
+## Content for Analysis
+${content}
+
+## Analysis Requirements
+1. Break down the content into key components
+2. Analyze relationships and dependencies
+3. Identify patterns, trends, or anomalies
+4. Provide insights and interpretations
+
+Please output only the analysis in Markdown format.`
+    };
+
+    return prompts[analysisType as keyof typeof prompts] || prompts.summary;
+  }
+
+  /**
+   * Build AI analysis prompt
+   */
+  private buildAIAnalysisPrompt(content: string, analysisType: string): string {
+    const prompts = {
+      technical: `Please perform a technical analysis of the following content:
+
+${content}
+
+Focus on:
+1. Technical architecture and design
+2. Code quality and patterns
+3. Performance considerations
+4. Security implications
+5. Best practices compliance
+
+Provide the analysis in Markdown format.`,
+
+      business: `Please perform a business analysis of the following content:
+
+${content}
+
+Focus on:
+1. Business value and impact
+2. Market positioning
+3. Competitive advantages
+4. Risk assessment
+5. Strategic recommendations
+
+Provide the analysis in Markdown format.`,
+
+      code: `Please analyze the following code or technical content:
+
+${content}
+
+Focus on:
+1. Code structure and organization
+2. Algorithm efficiency
+3. Error handling
+4. Maintainability
+5. Potential improvements
+
+Provide the analysis in Markdown format.`,
+
+      documentation: `Please analyze the following documentation or content:
+
+${content}
+
+Focus on:
+1. Clarity and readability
+2. Completeness and accuracy
+3. Organization and structure
+4. Audience appropriateness
+5. Improvement suggestions
+
+Provide the analysis in Markdown format.`,
+
+      general: `Please analyze the following content:
+
+${content}
+
+Provide a comprehensive analysis covering:
+1. Key points and main ideas
+2. Structure and organization
+3. Strengths and weaknesses
+4. Recommendations for improvement
+
+Use Markdown format for the analysis.`
+    };
+
+    return prompts[analysisType as keyof typeof prompts] || prompts.general;
   }
 
   /**
@@ -860,6 +1220,9 @@ export class IntentOrchSDK {
 
       this.toolRegistry.registerTool(tool, executor, serverName, serverName);
     });
+    
+    // Update Cloud Intent Engine tools after registering new tools
+    this.syncToolsToCloudIntentEngine();
   }
 
   /**
@@ -896,7 +1259,7 @@ export class IntentOrchSDK {
       const tools = this.toolRegistry.getAllTools().map(t => t.tool);
       this.cloudIntentEngine.setAvailableTools(tools);
 
-      this.logger.info('Cloud Intent Engine initialized successfully');
+      this.logger.info(`Cloud Intent Engine initialized successfully with ${tools.length} tools`);
     } catch (error) {
       this.logger.error(`Failed to initialize Cloud Intent Engine: ${error}`);
       throw error;
@@ -931,7 +1294,7 @@ export class IntentOrchSDK {
         maxRetries: 3,
       },
       execution: {
-        maxConcurrentTools: 3,
+        maxConcurrentTools: 10, // Increased from 3 to allow more concurrent tools
         timeout: 60000,
         retryAttempts: 2,
         retryDelay: 1000,
@@ -1374,6 +1737,34 @@ export class IntentOrchSDK {
     }
 
     return this.cloudIntentEngine.getStatus();
+  }
+
+  /**
+   * Sync tools to Cloud Intent Engine
+   */
+  private syncToolsToCloudIntentEngine(): void {
+    if (!this.cloudIntentEngine) {
+      // Cloud Intent Engine not initialized yet, tools will be synced when it's initialized
+      return;
+    }
+
+    try {
+      const tools = this.toolRegistry.getAllTools().map(t => t.tool);
+      this.cloudIntentEngine.setAvailableTools(tools);
+      this.logger.info(`Synced ${tools.length} tools to Cloud Intent Engine`);
+      
+      // Notify all registered callbacks
+      this.toolUpdateCallbacks.forEach(callback => callback());
+    } catch (error) {
+      this.logger.error(`Failed to sync tools to Cloud Intent Engine: ${error}`);
+    }
+  }
+
+  /**
+   * Register callback for tool updates
+   */
+  onToolsUpdated(callback: () => void): void {
+    this.toolUpdateCallbacks.push(callback);
   }
 
   /**

@@ -236,8 +236,34 @@ export class PreExecutionValidator {
 
     switch (targetType) {
       case 'string':
+        if (typeof value === 'object' && value !== null) {
+          // MCP-compatible object serialization strategy
+          try {
+            // First choice: JSON serialization (MCP base format)
+            const jsonString = JSON.stringify(value, null, 2);
+            if (jsonString !== '{}' && jsonString !== '[]') {
+              return jsonString;
+            }
+          } catch (jsonError) {
+            // JSON serialization failed, continue to other strategies
+          }
+          
+          // Alternative: meaningful string representation
+          if (value instanceof Error) {
+            return value.toString();
+          }
+          
+          if (typeof value.toString === 'function') {
+            const stringRep = value.toString();
+            if (stringRep !== '[object Object]') {
+              return stringRep;
+            }
+          }
+          
+          // Last resort: type information
+          return `[${value.constructor?.name || 'Object'}]`;
+        }
         return String(value);
-
       case 'number':
       case 'integer':
         const num = Number(value);

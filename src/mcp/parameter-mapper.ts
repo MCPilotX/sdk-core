@@ -77,7 +77,7 @@ export class ParameterMapper {
    * Current configuration
    */
   private static config: ParameterMapperConfig = { ...ParameterMapper.defaultConfig };
-  private static readonly DEFAULT_MAPPINGS: ParameterMappingRule[] = [
+  private static DEFAULT_MAPPINGS: ParameterMappingRule[] = [
     // Universal parameter mapping rules - works for any MCP service
     {
       pattern: /.*/, // Matches all tools
@@ -322,6 +322,34 @@ export class ParameterMapper {
    */
   static configure(config: Partial<ParameterMapperConfig>): void {
     this.config = { ...this.config, ...config };
+  }
+  
+  /**
+   * Add custom mapping rules
+   */
+  static addMappingRules(rules: ParameterMappingRule[]): void {
+    // Add new rules with priority 15 (higher than default rules)
+    const enhancedRules = rules.map(rule => ({
+      ...rule,
+      priority: rule.priority || 15, // Default priority higher than existing rules
+    }));
+    
+    this.DEFAULT_MAPPINGS.push(...enhancedRules);
+  }
+  
+  /**
+   * Clear all custom mapping rules
+   */
+  static clearCustomMappingRules(): void {
+    // Keep only rules with priority <= 10 (default rules)
+    this.DEFAULT_MAPPINGS = this.DEFAULT_MAPPINGS.filter(rule => rule.priority <= 10);
+  }
+  
+  /**
+   * Get all mapping rules (including custom ones)
+   */
+  static getAllMappingRules(): ParameterMappingRule[] {
+    return [...this.DEFAULT_MAPPINGS];
   }
   
   /**

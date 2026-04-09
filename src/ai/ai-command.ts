@@ -169,7 +169,11 @@ export class AICommand {
     console.log(chalk.blue(`🤖 Query: "${query}"`));
 
     try {
-      const result = await this.ai.generateText(query);
+      const text = await this.ai.generateText(query);
+      const result: AskResult = {
+        type: 'text_response',
+        text,
+      };
       await this.handleAskResult(result);
 
     } catch (error: any) {
@@ -215,7 +219,6 @@ export class AICommand {
         break;
 
       case 'text_response':
-      case 'text':
         console.log(chalk.green('🤖 AI Response:'));
         console.log(chalk.white(result.text || result.message || ''));
         if (result.reasoning) {
