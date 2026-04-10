@@ -31,7 +31,7 @@ export class ProcessManager extends EventEmitter {
       this.instances.clear();
       return;
     }
-    
+
     try {
       const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
       // Support both formats: config.services array or config.services.instances array
@@ -41,10 +41,10 @@ export class ProcessManager extends EventEmitter {
       } else if (config.services?.instances && Array.isArray(config.services.instances)) {
         services = config.services.instances;
       }
-      
+
       // Create a set of service names from the config
       const configServiceNames = new Set(services.map((s: any) => s.name));
-      
+
       // Remove services that are no longer in the config
       for (const [name, instance] of this.instances.entries()) {
         if (!configServiceNames.has(name)) {
@@ -55,7 +55,7 @@ export class ProcessManager extends EventEmitter {
           this.instances.delete(name);
         }
       }
-      
+
       // Add or update services from config
       services.forEach((s: any) => {
         if (this.instances.has(s.name)) {
@@ -64,7 +64,7 @@ export class ProcessManager extends EventEmitter {
           // Only update non-runtime properties
           existing.runtime = s.runtime;
           existing.path = s.path;
-          if (s.image !== undefined) existing.image = s.image;
+          if (s.image !== undefined) {existing.image = s.image;}
         } else {
           // Add new service
           this.instances.set(s.name, { ...s, adapter: null, status: 'stopped', tools: [] });

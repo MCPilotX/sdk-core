@@ -35,7 +35,7 @@ export class IntentEngine {
 
   async parse(query: string): Promise<IntentResult> {
     const lowerQuery = query.toLowerCase();
-    
+
     // Check for filesystem queries
     if (lowerQuery.includes('list') && lowerQuery.includes('file')) {
       return {
@@ -44,10 +44,10 @@ export class IntentEngine {
         params: { path: '.' },
       };
     }
-    
+
     // Check for calculator queries
-    if (lowerQuery.includes('calculate') || 
-        lowerQuery.includes('add') || 
+    if (lowerQuery.includes('calculate') ||
+        lowerQuery.includes('add') ||
         lowerQuery.includes('subtract') ||
         lowerQuery.includes('math')) {
       return {
@@ -56,7 +56,7 @@ export class IntentEngine {
         params: { expression: query },
       };
     }
-    
+
     // Default fallback
     return {
       tool: 'filesystem',

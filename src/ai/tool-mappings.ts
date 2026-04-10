@@ -200,16 +200,16 @@ export class ToolMappingManager {
     if (action === null || action === undefined || target === null || target === undefined) {
       return undefined;
     }
-    
+
     // Normalize inputs
     const normalizedAction = action.toLowerCase().trim();
     const normalizedTarget = target.toLowerCase().trim();
-    
+
     // Handle empty inputs - they shouldn't match anything
     if (normalizedAction === '' || normalizedTarget === '') {
       return undefined;
     }
-    
+
     // First check exact match in custom mappings
     for (const mapping of this.customMappings) {
       if (mapping.intentAction === normalizedAction && mapping.intentTarget === normalizedTarget) {
@@ -229,14 +229,14 @@ export class ToolMappingManager {
     for (const mapping of this.customMappings) {
       // Only match if normalizedAction is contained in mapping.intentAction (e.g., "lst" in "list")
       // OR if mapping.intentAction is contained in normalizedAction AND they're similar length
-      const actionMatches = mapping.intentAction.includes(normalizedAction) || 
-        (normalizedAction.includes(mapping.intentAction) && 
+      const actionMatches = mapping.intentAction.includes(normalizedAction) ||
+        (normalizedAction.includes(mapping.intentAction) &&
          Math.abs(normalizedAction.length - mapping.intentAction.length) <= 2);
-      
-      const targetMatches = mapping.intentTarget.includes(normalizedTarget) || 
-        (normalizedTarget.includes(mapping.intentTarget) && 
+
+      const targetMatches = mapping.intentTarget.includes(normalizedTarget) ||
+        (normalizedTarget.includes(mapping.intentTarget) &&
          Math.abs(normalizedTarget.length - mapping.intentTarget.length) <= 2);
-      
+
       if (actionMatches && targetMatches) {
         return mapping;
       }
@@ -244,14 +244,14 @@ export class ToolMappingManager {
 
     // Try fuzzy matching in default mappings
     for (const mapping of this.mappings) {
-      const actionMatches = mapping.intentAction.includes(normalizedAction) || 
-        (normalizedAction.includes(mapping.intentAction) && 
+      const actionMatches = mapping.intentAction.includes(normalizedAction) ||
+        (normalizedAction.includes(mapping.intentAction) &&
          Math.abs(normalizedAction.length - mapping.intentAction.length) <= 2);
-      
-      const targetMatches = mapping.intentTarget.includes(normalizedTarget) || 
-        (normalizedTarget.includes(mapping.intentTarget) && 
+
+      const targetMatches = mapping.intentTarget.includes(normalizedTarget) ||
+        (normalizedTarget.includes(mapping.intentTarget) &&
          Math.abs(normalizedTarget.length - mapping.intentTarget.length) <= 2);
-      
+
       if (actionMatches && targetMatches) {
         return mapping;
       }
@@ -259,20 +259,20 @@ export class ToolMappingManager {
 
     // Try to find by partial target match - with length restriction
     for (const mapping of this.customMappings) {
-      const targetMatches = mapping.intentTarget.includes(normalizedTarget) || 
-        (normalizedTarget.includes(mapping.intentTarget) && 
+      const targetMatches = mapping.intentTarget.includes(normalizedTarget) ||
+        (normalizedTarget.includes(mapping.intentTarget) &&
          Math.abs(normalizedTarget.length - mapping.intentTarget.length) <= 2);
-      
+
       if (targetMatches) {
         return mapping;
       }
     }
 
     for (const mapping of this.mappings) {
-      const targetMatches = mapping.intentTarget.includes(normalizedTarget) || 
-        (normalizedTarget.includes(mapping.intentTarget) && 
+      const targetMatches = mapping.intentTarget.includes(normalizedTarget) ||
+        (normalizedTarget.includes(mapping.intentTarget) &&
          Math.abs(normalizedTarget.length - mapping.intentTarget.length) <= 2);
-      
+
       if (targetMatches) {
         return mapping;
       }
@@ -287,7 +287,7 @@ export class ToolMappingManager {
   findAlternativeTool(
     action: string,
     target: string,
-    availableTools: string[]
+    availableTools: string[],
   ): { toolName: string; mapping: ToolMapping } | undefined {
     const mapping = this.findMapping(action, target);
     if (!mapping) {
@@ -314,7 +314,7 @@ export class ToolMappingManager {
    */
   mapParameters(
     mapping: ToolMapping,
-    intentParams: Record<string, any>
+    intentParams: Record<string, any>,
   ): Record<string, any> {
     const toolParams: Record<string, any> = {};
 
@@ -343,7 +343,7 @@ export class ToolMappingManager {
    */
   removeCustomMapping(action: string, target: string): boolean {
     const index = this.customMappings.findIndex(
-      m => m.intentAction === action && m.intentTarget === target
+      m => m.intentAction === action && m.intentTarget === target,
     );
     if (index !== -1) {
       this.customMappings.splice(index, 1);

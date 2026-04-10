@@ -25,7 +25,7 @@ export class Orchestrator {
       // Use hybrid AI intent parser (replaces EnhancedIntentEngine)
       this.intentEngine = new HybridAIParser({
         aiConfig: this.config.ai,
-        confidenceThreshold: 0.6
+        confidenceThreshold: 0.6,
       });
 
       logger.info('AI features enabled (using HybridAIParser)');

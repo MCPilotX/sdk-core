@@ -4,13 +4,13 @@
  */
 
 import { IntentResult, Intent } from './intent-types';
-import { 
-  IntentParser, 
-  ParserContext, 
-  ParserType, 
-  ParserConfig, 
+import {
+  IntentParser,
+  ParserContext,
+  ParserType,
+  ParserConfig,
   ParserSelectionStrategy,
-  ParserCapabilities
+  ParserCapabilities,
 } from './intent-parser.interface';
 import { RuleBasedParser } from './rule-based-parser';
 import { HybridAIParser, HybridAIParserConfig } from './hybrid-ai-parser';
@@ -43,19 +43,19 @@ export class IntentParserUtils {
     return new IntentParserSelector({
       strategy: 'hybrid',
       maxResponseTime: 3000,
-      minConfidence: 0.6
+      minConfidence: 0.6,
     });
   }
-  
+
   /**
    * Create a simple parser for basic use cases
    */
   static createSimpleParser(): RuleBasedParser {
     return new RuleBasedParser({
-      confidenceThreshold: 0.7
+      confidenceThreshold: 0.7,
     });
   }
-  
+
   /**
    * Create an AI-enhanced parser
    */
@@ -63,10 +63,10 @@ export class IntentParserUtils {
     return new HybridAIParser({
       aiConfig,
       confidenceThreshold: 0.6,
-      ruleConfidenceThreshold: 0.7
+      ruleConfidenceThreshold: 0.7,
     });
   }
-  
+
   /**
    * Parse a query with the default selector
    */
@@ -77,13 +77,13 @@ export class IntentParserUtils {
   }> {
     const selector = this.createDefaultSelector();
     const context: ParserContext = availableTools ? { availableTools } : {};
-    
+
     const { result, selection } = await selector.parseWithBestFit(query, context);
-    
+
     return {
       result,
       parserType: selection.parserType,
-      confidence: result.confidence
+      confidence: result.confidence,
     };
   }
 }
@@ -97,7 +97,7 @@ export const IntentParserExamples = [
   'ping google.com',
   'start the web server',
   'stop the background service',
-  'check status of my-service'
+  'check status of my-service',
 ];
 
 /**
@@ -115,5 +115,5 @@ export type {
   ParserFactoryConfig,
   ParserSelectorConfig,
   SelectionResult,
-  Intent
+  Intent,
 };

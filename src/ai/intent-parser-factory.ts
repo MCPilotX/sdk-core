@@ -30,70 +30,70 @@ export interface ParserFactoryConfig {
 export class IntentParserFactory {
   private config: ParserFactoryConfig;
   private parsers: Map<ParserType, IntentParser> = new Map();
-  
+
   constructor(config: ParserFactoryConfig = {}) {
     this.config = {
       defaultParserType: 'hybrid',
       selectionStrategy: 'hybrid',
-      ...config
+      ...config,
     };
   }
-  
+
   /**
    * Create a parser of the specified type
    */
   createParser(type: ParserType, config?: ParserConfig): IntentParser {
     logger.debug(`[IntentParserFactory] Creating parser of type: ${type}`);
-    
+
     let parser: IntentParser;
-    
+
     switch (type) {
       case 'rule':
         parser = this.createRuleBasedParser(config);
         break;
-        
+
       case 'hybrid':
         parser = this.createHybridAIParser(config);
         break;
-        
+
       case 'cloud':
         parser = this.createCloudParser(config);
         break;
-        
+
       default:
         throw new Error(`Unknown parser type: ${type}`);
     }
-    
+
     // Cache the parser
     this.parsers.set(type, parser);
-    
+
     return parser;
   }
-  
+
   /**
    * Create rule-based parser
    */
   private createRuleBasedParser(config?: ParserConfig): RuleBasedParser {
     const mergedConfig = {
       ...this.config.parserConfigs?.rule,
-      ...config
+      ...config,
     };
-    
+
     return new RuleBasedParser(mergedConfig);
   }
-  
+
   /**
    * Create hybrid AI parser
    */
   private createHybridAIParser(config?: ParserConfig): HybridAIParser {
     const mergedConfig: HybridAIParserConfig = {
       ...this.config.parserConfigs?.hybrid,
-      ...config
+      ...config,
     };
-    
+
     return new HybridAIParser(mergedConfig);
   }
-  
+
   /**
    * Create cloud parser (placeholder for now)
    */
@@ -103,7 +103,7 @@ export class IntentParserFactory {
     logger.warn('[IntentParserFactory] Cloud parser not implemented, using hybrid parser as fallback');
     return this.createHybridAIParser(config);
   }
-  
+
   /**
    * Get or create a parser of the specified type
    */
@@ -112,10 +112,10 @@ export class IntentParserFactory {
     if (cachedParser) {
       return cachedParser;
     }
-    
+
     return this.createParser(type, config);
   }
-  
+
   /**
    * Get the default parser
    */
@@ -123,22 +123,22 @@ export class IntentParserFactory {
     const defaultType = this.config.defaultParserType || 'hybrid';
     return this.getParser(defaultType, config);
   }
-  
+
   /**
    * Create a chain of parsers for sequential trying
    */
   createParserChain(types?: ParserType[], configs?: Partial<Record<ParserType, ParserConfig>>): IntentParser[] {
     const parserTypes = types || this.getDefaultParserChain();
     const parsers: IntentParser[] = [];
-    
+
     for (const type of parserTypes) {
       const typeConfig = configs?.[type];
       parsers.push(this.getParser(type, typeConfig));
     }
-    
+
     return parsers;
   }
-  
+
   /**
    * Get default parser chain based on selection strategy
    */
@@ -146,17 +146,17 @@ export class IntentParserFactory {
     switch (this.config.selectionStrategy) {
       case 'fastest':
         return ['rule', 'hybrid', 'cloud'];
-        
+
       case 'most_accurate':
         return ['cloud', 'hybrid', 'rule'];
-        
+
       case 'hybrid':
       case 'cost_aware':
       default:
         return ['rule', 'hybrid', 'cloud'];
     }
   }
-  
+
   /**
    * Clear parser cache
    */
@@ -164,28 +164,28 @@ export class IntentParserFactory {
     this.parsers.clear();
     logger.debug('[IntentParserFactory] Parser cache cleared');
   }
-  
+
   /**
    * Update factory configuration
    */
   updateConfig(config: Partial<ParserFactoryConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     // Clear cache if parser configs changed
     if (config.parserConfigs) {
       this.clearCache();
     }
-    
+
     logger.debug('[IntentParserFactory] Configuration updated');
   }
-  
+
   /**
    * Get all available parser types
    */
   getAvailableParserTypes(): ParserType[] {
     return ['rule', 'hybrid', 'cloud'];
   }
-  
+
   /**
    * Get parser capabilities information
    */
@@ -205,9 +205,9 @@ export class IntentParserFactory {
           supportsParameterExtraction: true,
           supportsIntentDecomposition: false,
           averageResponseTime: 10, // ms
-          costPerRequest: 0
+          costPerRequest: 0,
         };
-        
+
       case 'hybrid':
         return {
           supportsAI: true,
@@ -215,9 +215,9 @@ export class IntentParserFactory {
           supportsParameterExtraction: true,
           supportsIntentDecomposition: false,
           averageResponseTime: 500, // ms (depends on AI)
-          costPerRequest: 0.001 // Example cost
+          costPerRequest: 0.001, // Example cost
         };
-        
+
       case 'cloud':
         return {
           supportsAI: true,
@@ -225,9 +225,9 @@ export class IntentParserFactory {
           supportsParameterExtraction: true,
           supportsIntentDecomposition: true,
           averageResponseTime: 2000, // ms
-          costPerRequest: 0.01 // Example cost
+          costPerRequest: 0.01, // Example cost
         };
-        
+
       default:
         throw new Error(`Unknown parser type: ${type}`);
     }

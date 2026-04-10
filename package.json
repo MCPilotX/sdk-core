@@ -1,10 +1,32 @@
 {
   "name": "@mcpilotx/intentorch",
-  "version": "0.5.0",
-  "description": "Intent-Driven MCP Orchestration Toolkit - Transform natural language into executable workflows with AI-powered intent parsing",
-  "license": "Apache-2.0",
+  "version": "0.6.0",
   "type": "module",
+  "description": "Intent-Driven MCP Orchestration Toolkit - Transform natural language into executable workflows with AI-powered intent parsing and MCP tool orchestration",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "intent",
+    "orchestration",
+    "ai",
+    "workflow",
+    "automation",
+    "typescript",
+    "sdk",
+    "toolkit"
+  ],
+  "license": "Apache-2.0",
+  "author": "MCPilotX",
+  "homepage": "https://github.com/MCPilotX/IntentOrch#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MCPilotX/IntentOrch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MCPilotX/IntentOrch/issues"
+  },
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
@@ -12,57 +34,36 @@
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./ai": {
-      "import": "./dist/ai/index.js",
-      "require": "./dist/ai/index.js",
-      "types": "./dist/ai/index.d.ts"
-    },
-    "./core": {
-      "import": "./dist/core/index.js",
-      "require": "./dist/core/index.js",
-      "types": "./dist/core/index.d.ts"
-    },
-    "./mcp": {
-      "import": "./dist/mcp/index.js",
-      "require": "./dist/mcp/index.js",
-      "types": "./dist/mcp/index.d.ts"
-    },
-    "./runtime": {
-      "import": "./dist/runtime/index.js",
-      "require": "./dist/runtime/index.js",
-      "types": "./dist/runtime/index.d.ts"
-    },
-    "./daemon": {
-      "import": "./dist/daemon/index.js",
-      "require": "./dist/daemon/index.js",
-      "types": "./dist/daemon/index.d.ts"
-    },
     "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc --outDir dist --project tsconfig.json && node scripts/import-extensions.js",
-    "clean": "rm -rf dist",
+    "build": "tsc && node scripts/build/import-extensions.js",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "eslint src/**/*.ts",
-    "prepublishOnly": "npm run build",
-    "postbuild": "node scripts/import-extensions.js",
-    "docs:validate": "node scripts/sync-docs.js validate",
-    "docs:prepare": "node scripts/sync-docs.js prepare-npm",
-    "docs:sync": "node scripts/sync-docs.js all",
-    "docs:verify": "node scripts/sync-docs.js verify"
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --coverage --ci --maxWorkers=2",
+    "prepublishOnly": "npm run clean && npm run test && npm run build",
+    "prepare": "npm run build"
   },
   "dependencies": {
+    "chalk": "^4.1.2",
     "dockerode": "^4.0.2",
     "dotenv": "^17.3.1",
     "uuid": "^11.0.3",
     "zod": "^4.3.6"
   },
-  "optionalDependencies": {
-    "@xenova/transformers": "^2.17.2",
-    "onnxruntime-node": "^1.24.3"
-  },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-typescript": "^7.28.5",
     "@eslint/js": "^10.0.1",
     "@hono/node-server": "^1.19.12",
     "@jest/globals": "^29.7.0",
@@ -77,34 +78,13 @@
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.58.0"
   },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "ai",
-    "orchestration",
-    "sdk",
-    "docker",
-    "nodejs",
-    "python",
-    "go",
-    "rust"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MCPilotX/IntentOrch.git",
-    "directory": "IntentOrch"
+  "optionalDependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "onnxruntime-node": "^1.24.3"
   },
-  "bugs": {
-    "url": "https://github.com/MCPilotX/IntentOrch/issues"
+  "engines": {
+    "node": ">=18.0.0"
   },
-  "homepage": "https://github.com/MCPilotX/IntentOrch#readme",
-  "files": [
-    "LICENSE",
-    "README.md",
-    "dist/**/*.d.ts",
-    "dist/**/*.js",
-    "docs/"
-  ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

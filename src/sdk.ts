@@ -93,7 +93,7 @@ export class IntentOrchSDK {
   private mcpClients: Map<string, MCPClient> = new Map();
   private toolRegistry: ToolRegistry = new ToolRegistry();
   private mcpOptions: SDKOptions['mcp'];
-  
+
   // Tool synchronization
   private toolUpdateCallbacks: Array<() => void> = [];
 
@@ -266,7 +266,7 @@ export class IntentOrchSDK {
       if (error.message && error.message.includes(`Service "${name}" not found`)) {
         throw error;
       }
-      
+
       this.logger.error(`Failed to get status for service '${name}': ${error}`);
       return {
         name,
@@ -334,10 +334,10 @@ export class IntentOrchSDK {
     try {
       // Use AI instance to parse intent
       const intent = await this.ai.parseIntent(query);
-      
+
       // Map intent to tool call or suggestions
       const toolCall = this.ai.mapIntentToTool(intent);
-      
+
       return {
         type: 'tool_call',
         tool: toolCall,
@@ -363,7 +363,7 @@ export class IntentOrchSDK {
     try {
       // Use AI instance to generate text
       const text = await this.ai.generateText(query, options);
-      
+
       return {
         type: 'text',
         text,
@@ -446,7 +446,7 @@ export class IntentOrchSDK {
       this.registerAIGenerationTool();
 
       this.logger.info('AI tools registered successfully');
-      
+
       // Sync tools to Cloud Intent Engine if initialized
       this.syncToolsToCloudIntentEngine();
     } catch (error) {
@@ -467,23 +467,23 @@ export class IntentOrchSDK {
         properties: {
           content: {
             type: 'string' as const,
-            description: 'Content to analyze and summarize'
+            description: 'Content to analyze and summarize',
           },
           format: {
             type: 'string' as const,
             enum: ['markdown', 'text', 'html'],
             description: 'Output format',
-            default: 'markdown'
+            default: 'markdown',
           },
           analysisType: {
             type: 'string' as const,
             enum: ['summary', 'review', 'analysis'],
             description: 'Type of analysis to perform',
-            default: 'summary'
-          }
+            default: 'summary',
+          },
         },
-        required: ['content'] as const
-      }
+        required: ['content'] as const,
+      },
     };
 
     const executor = async (args: Record<string, any>): Promise<any> => {
@@ -491,7 +491,7 @@ export class IntentOrchSDK {
         const prompt = this.buildAISummaryPrompt(args.content, args.analysisType || 'summary');
         const result = await this.ai.generateText(prompt, {
           temperature: 0.3,
-          maxTokens: 2048
+          maxTokens: 2048,
         });
 
         return {
@@ -500,8 +500,8 @@ export class IntentOrchSDK {
           format: args.format || 'markdown',
           metadata: {
             generatedAt: new Date().toISOString(),
-            analysisType: args.analysisType || 'summary'
-          }
+            analysisType: args.analysisType || 'summary',
+          },
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -509,8 +509,8 @@ export class IntentOrchSDK {
           success: false,
           error: `AI summary generation failed: ${errorMessage}`,
           metadata: {
-            generatedAt: new Date().toISOString()
-          }
+            generatedAt: new Date().toISOString(),
+          },
         };
       }
     };
@@ -531,23 +531,23 @@ export class IntentOrchSDK {
         properties: {
           content: {
             type: 'string' as const,
-            description: 'Content to analyze'
+            description: 'Content to analyze',
           },
           analysisType: {
             type: 'string' as const,
             enum: ['technical', 'business', 'code', 'documentation', 'general'],
             description: 'Type of analysis',
-            default: 'general'
+            default: 'general',
           },
           format: {
             type: 'string' as const,
             enum: ['markdown', 'text', 'json'],
             description: 'Output format',
-            default: 'markdown'
-          }
+            default: 'markdown',
+          },
         },
-        required: ['content'] as const
-      }
+        required: ['content'] as const,
+      },
     };
 
     const executor = async (args: Record<string, any>): Promise<any> => {
@@ -555,7 +555,7 @@ export class IntentOrchSDK {
         const prompt = this.buildAIAnalysisPrompt(args.content, args.analysisType || 'general');
         const result = await this.ai.generateText(prompt, {
           temperature: 0.3,
-          maxTokens: 2048
+          maxTokens: 2048,
         });
 
         return {
@@ -564,8 +564,8 @@ export class IntentOrchSDK {
           format: args.format || 'markdown',
           metadata: {
             generatedAt: new Date().toISOString(),
-            analysisType: args.analysisType || 'general'
-          }
+            analysisType: args.analysisType || 'general',
+          },
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -573,8 +573,8 @@ export class IntentOrchSDK {
           success: false,
           error: `AI analysis failed: ${errorMessage}`,
           metadata: {
-            generatedAt: new Date().toISOString()
-          }
+            generatedAt: new Date().toISOString(),
+          },
         };
       }
     };
@@ -595,23 +595,23 @@ export class IntentOrchSDK {
         properties: {
           prompt: {
             type: 'string' as const,
-            description: 'Prompt for content generation'
+            description: 'Prompt for content generation',
           },
           format: {
             type: 'string' as const,
             enum: ['markdown', 'text', 'html', 'json'],
             description: 'Output format',
-            default: 'markdown'
+            default: 'markdown',
           },
           length: {
             type: 'string' as const,
             enum: ['short', 'medium', 'long'],
             description: 'Desired output length',
-            default: 'medium'
-          }
+            default: 'medium',
+          },
         },
-        required: ['prompt'] as const
-      }
+        required: ['prompt'] as const,
+      },
     };
 
     const executor = async (args: Record<string, any>): Promise<any> => {
@@ -619,12 +619,12 @@ export class IntentOrchSDK {
         const maxTokensMap = {
           short: 500,
           medium: 1024,
-          long: 2048
+          long: 2048,
         };
 
         const result = await this.ai.generateText(args.prompt, {
           temperature: 0.7,
-          maxTokens: maxTokensMap[args.length as keyof typeof maxTokensMap] || 1024
+          maxTokens: maxTokensMap[args.length as keyof typeof maxTokensMap] || 1024,
         });
 
         return {
@@ -633,8 +633,8 @@ export class IntentOrchSDK {
           format: args.format || 'markdown',
           metadata: {
             generatedAt: new Date().toISOString(),
-            length: args.length || 'medium'
-          }
+            length: args.length || 'medium',
+          },
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -642,8 +642,8 @@ export class IntentOrchSDK {
           success: false,
           error: `AI content generation failed: ${errorMessage}`,
           metadata: {
-            generatedAt: new Date().toISOString()
-          }
+            generatedAt: new Date().toISOString(),
+          },
         };
       }
     };
@@ -694,7 +694,7 @@ ${content}
 3. Identify patterns, trends, or anomalies
 4. Provide insights and interpretations
 
-Please output only the analysis in Markdown format.`
+Please output only the analysis in Markdown format.`,
     };
 
     return prompts[analysisType as keyof typeof prompts] || prompts.summary;
@@ -767,7 +767,7 @@ Provide a comprehensive analysis covering:
 3. Strengths and weaknesses
 4. Recommendations for improvement
 
-Use Markdown format for the analysis.`
+Use Markdown format for the analysis.`,
     };
 
     return prompts[analysisType as keyof typeof prompts] || prompts.general;
@@ -1148,9 +1148,9 @@ Use Markdown format for the analysis.`
   /**
    * List all available tools
    */
-  listTools(): Array<{ 
-    name: string; 
-    description: string; 
+  listTools(): Array<{
+    name: string;
+    description: string;
     serverName?: string;
     serverId: string;
     inputSchema?: {
@@ -1220,7 +1220,7 @@ Use Markdown format for the analysis.`
 
       this.toolRegistry.registerTool(tool, executor, serverName, serverName);
     });
-    
+
     // Update Cloud Intent Engine tools after registering new tools
     this.syncToolsToCloudIntentEngine();
   }
@@ -1752,7 +1752,7 @@ Use Markdown format for the analysis.`
       const tools = this.toolRegistry.getAllTools().map(t => t.tool);
       this.cloudIntentEngine.setAvailableTools(tools);
       this.logger.info(`Synced ${tools.length} tools to Cloud Intent Engine`);
-      
+
       // Notify all registered callbacks
       this.toolUpdateCallbacks.forEach(callback => callback());
     } catch (error) {

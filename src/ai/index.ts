@@ -33,19 +33,19 @@ export {
   type ParserType,
   type ParserConfig,
   type ParserSelectionStrategy,
-  
+
   // Parser implementations
   RuleBasedParser,
   HybridAIParser,
   type HybridAIParserConfig,
-  
+
   // Factory and selector
   IntentParserFactory,
   type ParserFactoryConfig,
   IntentParserSelector,
   type ParserSelectorConfig,
   type SelectionResult,
-  
+
   // Utilities
   IntentParserUtils,
   IntentParserExamples,
@@ -103,7 +103,7 @@ export async function getAIStatus(config?: any) {
 export async function getIntentParserStatus() {
   const availableParsers = ['RuleBasedParser', 'HybridAIParser'];
   const legacyEngines = ['EnhancedIntentEngine', 'IntentEngine'];
-  
+
   return {
     availableParsers,
     legacyEngines,

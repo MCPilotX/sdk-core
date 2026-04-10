@@ -39,6 +39,7 @@ jest.mock('../src/ai/ai', () => ({
       suggestions: ['suggestion1', 'suggestion2'],
       message: 'Test result',
     }),
+    generateText: jest.fn<any>().mockResolvedValue('AI generated response'),
     testConnection: jest.fn<any>().mockResolvedValue({
       success: true,
       message: 'Connection test passed',
@@ -150,11 +151,10 @@ describe('IntentOrchSDK - Simple Tests', () => {
     it('should handle generateText with AI configuration', async () => {
       const result = await sdk.generateText('test query');
       
-      // Type assertion to fix TypeScript error
-      const askResult = result as any;
-      expect(askResult.type).toBe('suggestions');
-      expect(askResult.message).toBe('Test result');
-      expect(askResult.suggestions).toContain('AI generated response');
+      // generateText returns TextResult type
+      expect(result.type).toBe('text');
+      expect(result.text).toBe('AI generated response');
+      expect(result.tokensUsed).toBe(0);
     });
   });
 

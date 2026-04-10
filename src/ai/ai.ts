@@ -706,7 +706,7 @@ export class AI {
   async analyzeIntent(query: string): Promise<Intent> {
     // First try rule-based parsing
     const parsedIntent = await this.parseIntentCore(query);
-    
+
     // If we found a valid intent, return it
     if (parsedIntent.action !== 'unknown' && parsedIntent.confidence >= 0.7) {
       return parsedIntent;
@@ -1118,17 +1118,17 @@ export class AI {
   mapIntentToTool(intent: Intent): ToolCall {
     // Try to find tool mapping for this intent
     const mapping = toolMappingManager.findMapping(intent.action, intent.target);
-    
+
     if (mapping) {
       // Map intent parameters to tool parameters
       const toolParams = toolMappingManager.mapParameters(mapping, intent.params);
-      
+
       return {
         name: mapping.primaryTool,
         arguments: toolParams,
       };
     }
-    
+
     // Fallback to hardcoded mappings for backward compatibility
     return this.mapIntentToToolFallback(intent);
   }
@@ -1144,19 +1144,19 @@ export class AI {
       case 'list':
         return {
           name: 'filesystem.list_directory',
-          arguments: { 
+          arguments: {
             path: intent.params.path || '.',
             recursive: intent.params.recursive || false,
-            showHidden: intent.params.showHidden || false
+            showHidden: intent.params.showHidden || false,
           },
         };
 
       case 'read':
         return {
           name: 'filesystem.read_file',
-          arguments: { 
+          arguments: {
             path: intent.params.path || 'README.md',
-            encoding: intent.params.encoding || 'utf-8'
+            encoding: intent.params.encoding || 'utf-8',
           },
         };
 
@@ -1167,7 +1167,7 @@ export class AI {
             path: intent.params.path || '/tmp/unknown.txt',
             content: intent.params.content || '',
             encoding: intent.params.encoding || 'utf-8',
-            append: intent.params.append || false
+            append: intent.params.append || false,
           },
         };
 
@@ -1177,36 +1177,36 @@ export class AI {
           arguments: {
             host: intent.params.host || 'localhost',
             count: intent.params.count || 4,
-            timeout: intent.params.timeout || 5000
+            timeout: intent.params.timeout || 5000,
           },
         };
 
       case 'start':
         return {
           name: 'service_manager.start_service',
-          arguments: { 
+          arguments: {
             name: intent.params.service || intent.params.name || 'default',
             wait: intent.params.wait || true,
-            timeout: intent.params.timeout || 30000
+            timeout: intent.params.timeout || 30000,
           },
         };
 
       case 'stop':
         return {
           name: 'service_manager.stop_service',
-          arguments: { 
+          arguments: {
             name: intent.params.service || intent.params.name || 'default',
             force: intent.params.force || false,
-            timeout: intent.params.timeout || 30000
+            timeout: intent.params.timeout || 30000,
           },
         };
 
       case 'status':
         return {
           name: 'service_manager.get_status',
-          arguments: { 
+          arguments: {
             name: intent.params.service || intent.params.name,
-            detailed: intent.params.detailed || false
+            detailed: intent.params.detailed || false,
           },
         };
 
@@ -1215,7 +1215,7 @@ export class AI {
           name: 'ai.analyze_query',
           arguments: {
             query: intent.params.query || '',
-            context: intent.params.context || {}
+            context: intent.params.context || {},
           },
         };
 
@@ -1224,17 +1224,17 @@ export class AI {
           name: 'system.show_help',
           arguments: {
             topic: intent.params.topic || 'general',
-            detailed: intent.params.detailed || false
+            detailed: intent.params.detailed || false,
           },
         };
 
       default:
         return {
           name: 'system.unknown',
-          arguments: { 
+          arguments: {
             intent: JSON.stringify(intent),
             message: `Unknown intent action: ${intent.action}`,
-            suggestions: ['Try rephrasing your query', 'Use help for available commands']
+            suggestions: ['Try rephrasing your query', 'Use help for available commands'],
           },
         };
     }

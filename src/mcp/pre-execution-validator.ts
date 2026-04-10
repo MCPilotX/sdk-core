@@ -46,7 +46,7 @@ export class PreExecutionValidator {
   validate(
     toolName: string,
     toolSchema: Tool['inputSchema'],
-    args: Record<string, any>
+    args: Record<string, any>,
   ): ValidationResult {
     const warnings: string[] = [];
     const errors: string[] = [];
@@ -57,7 +57,7 @@ export class PreExecutionValidator {
       const { normalized, warnings: paramWarnings } = ParameterMapper.validateAndNormalize(
         toolName,
         toolSchema,
-        args
+        args,
       );
 
       warnings.push(...paramWarnings);
@@ -109,7 +109,7 @@ export class PreExecutionValidator {
     toolName: string,
     toolSchema: Tool['inputSchema'],
     args: Record<string, any>,
-    warnings: string[]
+    warnings: string[],
   ): Record<string, any> {
     const result: Record<string, any> = { ...args };
     const properties = toolSchema.properties || {};
@@ -159,7 +159,7 @@ export class PreExecutionValidator {
     paramName: string,
     value: any,
     paramSchema: any,
-    warnings: string[]
+    warnings: string[],
   ): void {
     // Validate minimum/maximum for numbers
     if (typeof value === 'number') {
@@ -197,14 +197,14 @@ export class PreExecutionValidator {
     allArgs: Record<string, any>,
     paramSchema: any,
     toolSchema: Tool['inputSchema'],
-    warnings: string[]
+    warnings: string[],
   ): void {
     // Check if this parameter requires other parameters
     if (paramSchema.requires) {
-      const requiredParams = Array.isArray(paramSchema.requires) 
-        ? paramSchema.requires 
+      const requiredParams = Array.isArray(paramSchema.requires)
+        ? paramSchema.requires
         : [paramSchema.requires];
-      
+
       for (const requiredParam of requiredParams) {
         if (!allArgs[requiredParam]) {
           warnings.push(`Parameter "${paramName}" requires parameter "${requiredParam}" to be set`);
@@ -217,7 +217,7 @@ export class PreExecutionValidator {
       const conflictingParams = Array.isArray(paramSchema.conflicts)
         ? paramSchema.conflicts
         : [paramSchema.conflicts];
-      
+
       for (const conflictingParam of conflictingParams) {
         if (allArgs[conflictingParam]) {
           warnings.push(`Parameter "${paramName}" conflicts with parameter "${conflictingParam}"`);
@@ -247,19 +247,19 @@ export class PreExecutionValidator {
           } catch (jsonError) {
             // JSON serialization failed, continue to other strategies
           }
-          
+
           // Alternative: meaningful string representation
           if (value instanceof Error) {
             return value.toString();
           }
-          
+
           if (typeof value.toString === 'function') {
             const stringRep = value.toString();
             if (stringRep !== '[object Object]') {
               return stringRep;
             }
           }
-          
+
           // Last resort: type information
           return `[${value.constructor?.name || 'Object'}]`;
         }
@@ -275,8 +275,8 @@ export class PreExecutionValidator {
       case 'boolean':
         if (typeof value === 'string') {
           const lower = value.toLowerCase();
-          if (lower === 'true' || lower === 'yes' || lower === '1') return true;
-          if (lower === 'false' || lower === 'no' || lower === '0') return false;
+          if (lower === 'true' || lower === 'yes' || lower === '1') {return true;}
+          if (lower === 'false' || lower === 'no' || lower === '0') {return false;}
         }
         return Boolean(value);
 
@@ -324,7 +324,7 @@ export class PreExecutionValidator {
     value: any,
     type: string,
     schema: any,
-    warnings: string[]
+    warnings: string[],
   ): void {
     switch (type) {
       case 'number':
@@ -375,7 +375,7 @@ export class PreExecutionValidator {
     toolSchema: Tool['inputSchema'],
     args: Record<string, any>,
     warnings: string[],
-    suggestions: string[]
+    suggestions: string[],
   ): Record<string, any> {
     const result = { ...args };
     const requiredParams = toolSchema.required || [];
@@ -463,7 +463,7 @@ export class PreExecutionValidator {
     toolSchema: Tool['inputSchema'],
     args: Record<string, any>,
     warnings: string[],
-    errors: string[]
+    errors: string[],
   ): Record<string, any> {
     const result = { ...args };
     const properties = toolSchema.properties || {};
@@ -485,7 +485,7 @@ export class PreExecutionValidator {
     properties: Record<string, any>,
     args: Record<string, any>,
     warnings: string[],
-    errors: string[]
+    errors: string[],
   ): void {
     // Example: If parameter A is provided, parameter B must also be provided
     // This is a simple implementation - in real system, dependencies would be defined in schema
@@ -509,7 +509,7 @@ export class PreExecutionValidator {
     toolName: string,
     properties: Record<string, any>,
     args: Record<string, any>,
-    warnings: string[]
+    warnings: string[],
   ): void {
     // Example: Parameters A and B cannot be used together
     const exclusiveGroups = [
@@ -533,14 +533,14 @@ export class PreExecutionValidator {
     toolName: string,
     toolSchema: Tool['inputSchema'],
     args: Record<string, any>,
-    suggestions: string[]
+    suggestions: string[],
   ): void {
     const properties = toolSchema.properties || {};
 
     // Suggest better parameter values based on common patterns
     for (const [paramName, paramValue] of Object.entries(args)) {
       const paramSchema = properties[paramName];
-      if (!paramSchema) continue;
+      if (!paramSchema) {continue;}
 
       // Suggest enum values if parameter doesn't match any
       if (paramSchema.enum && !paramSchema.enum.includes(paramValue)) {
@@ -582,25 +582,25 @@ export class PreExecutionValidator {
   private getUsefulMissingParameters(
     toolName: string,
     properties: Record<string, any>,
-    args: Record<string, any>
+    args: Record<string, any>,
   ): string[] {
     const usefulParams: string[] = [];
 
     // Suggest parameters based on tool name patterns
     if (toolName.includes('list') || toolName.includes('search')) {
-      if (!('limit' in args) && 'limit' in properties) usefulParams.push('limit');
-      if (!('offset' in args) && 'offset' in properties) usefulParams.push('offset');
-      if (!('sort' in args) && 'sort' in properties) usefulParams.push('sort');
+      if (!('limit' in args) && 'limit' in properties) {usefulParams.push('limit');}
+      if (!('offset' in args) && 'offset' in properties) {usefulParams.push('offset');}
+      if (!('sort' in args) && 'sort' in properties) {usefulParams.push('sort');}
     }
 
     if (toolName.includes('file') || toolName.includes('directory')) {
-      if (!('recursive' in args) && 'recursive' in properties) usefulParams.push('recursive');
-      if (!('showHidden' in args) && 'showHidden' in properties) usefulParams.push('showHidden');
+      if (!('recursive' in args) && 'recursive' in properties) {usefulParams.push('recursive');}
+      if (!('showHidden' in args) && 'showHidden' in properties) {usefulParams.push('showHidden');}
     }
 
     if (toolName.includes('network') || toolName.includes('http')) {
-      if (!('timeout' in args) && 'timeout' in properties) usefulParams.push('timeout');
-      if (!('retry' in args) && 'retry' in properties) usefulParams.push('retry');
+      if (!('timeout' in args) && 'timeout' in properties) {usefulParams.push('timeout');}
+      if (!('retry' in args) && 'retry' in properties) {usefulParams.push('retry');}
     }
 
     return usefulParams;

@@ -10,7 +10,35 @@ jest.mock('../src/core/config-manager');
 jest.mock('../src/runtime/adapter-advanced');
 jest.mock('../src/runtime/detector-advanced');
 jest.mock('../src/mcp');
-jest.mock('../src/ai/ai');
+jest.mock('../src/ai/ai', () => ({
+  AI: jest.fn().mockImplementation(() => ({
+    configure: jest.fn().mockResolvedValue(undefined),
+    ask: jest.fn().mockResolvedValue({
+      type: 'suggestions',
+      suggestions: ['suggestion1', 'suggestion2'],
+      message: 'Test result',
+    }),
+    generateText: jest.fn().mockResolvedValue('AI generated response'),
+    testConnection: jest.fn().mockResolvedValue({
+      success: true,
+      message: 'Connection test passed',
+    }),
+    isConfigured: true,
+    provider: 'mock',
+    model: 'mock-model',
+  })),
+  AIError: class AIError extends Error {
+    constructor(
+      public code: string,
+      message: string,
+      public category: 'config' | 'connection' | 'execution',
+      public suggestions: string[] = []
+    ) {
+      super(message);
+      this.name = 'AIError';
+    }
+  },
+}));
 
 describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
   let sdk: IntentOrchSDK;
@@ -48,7 +76,15 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
           message: `I received your query: "${query}"`,
           confidence: 0.8
         });
-      })
+      }),
+      generateText: jest.fn().mockResolvedValue('AI generated response'),
+      testConnection: jest.fn().mockResolvedValue({
+        success: true,
+        message: 'Connection test passed',
+      }),
+      isConfigured: true,
+      provider: 'mock',
+      model: 'mock-model',
     };
     (AI as unknown as jest.Mock).mockImplementation(() => mockAI);
 
@@ -406,17 +442,17 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
       const result = await sdk.generateText('Hello, how are you?');
 
       expect(result).toEqual({
-        type: 'suggestions',
-        message: expect.stringContaining('I received your query: "Hello, how are you?"'),
-        confidence: 0.8
+        type: 'text',
+        text: 'AI generated response',
+        tokensUsed: 0
       });
     });
 
     it('should throw error when AI is not configured', async () => {
       // Get the mock AI instance
       const mockAIInstance = (AI as unknown as jest.Mock).mock.results[0].value;
-      // Make ask throw when AI is not configured
-      mockAIInstance.ask.mockImplementationOnce(() => {
+      // Make generateText throw when AI is not configured
+      mockAIInstance.generateText.mockImplementationOnce(() => {
         throw new Error('AI provider not configured. Please call configureAI() with a valid API key.');
       });
 
@@ -431,8 +467,8 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
     it('should handle errors during AI query', async () => {
       // Get the mock AI instance
       const mockAIInstance = (AI as unknown as jest.Mock).mock.results[0].value;
-      // Make ask throw for this test
-      mockAIInstance.ask.mockImplementationOnce(() => {
+      // Make generateText throw for this test
+      mockAIInstance.generateText.mockImplementationOnce(() => {
         throw new Error('Config error');
       });
 
@@ -458,7 +494,7 @@ describe('IntentOrchSDK (formerly MCPilotSDK)', () => {
 
       expect(mockGetConfig).toHaveBeenCalled();
       expect(mockUpdateConfig).toHaveBeenCalledWith({
-        ai: { provider: 'openai', apiKey: 'test-key' },
+        ai: { provider: 'openai', apiKey: 'test-key', model: '' },
       });
       expect(mockLogger.info).toHaveBeenCalledWith('AI configuration updated successfully');
     });

@@ -34,7 +34,7 @@ IntentOrch handles all of this complexity so you can focus on building amazing a
 ### 🤖 **Intent-Driven Workflows**
 ```typescript
 // Tell IntentOrch what you want to accomplish
-const result = await sdk.executeIntent(
+const result = await sdk.executeWorkflowWithTracking(
   "Analyze the README.md file and suggest improvements"
 );
 // IntentOrch will: parse the intent, select tools, execute steps, return results
@@ -101,13 +101,13 @@ await sdk.connectMCPServer({
 });
 
 // Execute your first intent-driven workflow
-const result = await sdk.executeIntent(
+const result = await sdk.executeWorkflowWithTracking(
   "Read the package.json file and tell me what dependencies it has"
 );
 
 console.log('Workflow completed!');
-console.log('Answer:', result.answer);
-console.log('Tools used:', result.toolCalls?.length || 0);
+console.log('Answer:', result.result);
+console.log('Tools used:', result.statistics?.successfulSteps || 0);
 ```
 
 ### Quick Test Script
@@ -169,22 +169,22 @@ Parameters: { path: "package.json" }
 IntentOrch creates and executes dependency-aware workflows:
 
 ```typescript
-const workflow = await sdk.parseAndPlan(
+const workflow = await sdk.parseAndPlanWorkflow(
   "Clone a repo, analyze the code, and generate documentation"
 );
-// Returns: { steps: 3, dependencies: [...], estimatedTime: "2m" }
+// Returns: { plan: { query: "...", parsedIntents: [...], dependencies: [...], estimatedSteps: 3 } }
 ```
 
 ### 4. Execution with Tracking
 Monitor each step of the workflow execution:
 
 ```typescript
-const result = await sdk.executeIntentWithTracking(
+const result = await sdk.executeWorkflowWithTracking(
   "Process user data and generate report",
   {
-    onStepStart: (step) => console.log(`Starting: ${step.intentDescription}`),
-    onStepComplete: (step) => console.log(`Completed in ${step.duration}ms`),
-    onError: (error, step) => console.log(`Failed: ${step.toolName}`)
+    onStepStarted: (step) => console.log(`Starting: ${step.intentDescription}`),
+    onStepCompleted: (step) => console.log(`Completed in ${step.duration}ms`),
+    onStepFailed: (error, step) => console.log(`Failed: ${step.toolName}`)
   }
 );
 ```
@@ -215,7 +215,7 @@ async function analyzeProject() {
   });
   
   // Execute intent-driven analysis
-  const result = await sdk.executeIntent(`
+  const result = await sdk.executeWorkflowWithTracking(`
     Analyze this TypeScript project:
     1. Read all .ts files in src/
     2. Identify the main architecture patterns
@@ -258,7 +258,7 @@ async function multiServerWorkflow() {
   });
   
   // Complex intent that uses multiple servers
-  const result = await sdk.executeIntent(`
+  const result = await sdk.executeWorkflowWithTracking(`
     Analyze the git history of this project:
     1. Get recent commits
     2. Check which files changed most frequently
@@ -303,7 +303,7 @@ async function customToolWorkflow() {
   });
   
   // Use custom tools in intent execution
-  const result = await sdk.executeIntent(
+  const result = await sdk.executeWorkflowWithTracking(
     "Calculate code metrics for src/sdk.ts and suggest refactoring"
   );
   
@@ -442,26 +442,13 @@ npm run build
 npm run examples
 ```
 
-### Current Test Status
-
-| Module | Statements | Branches | Functions | Lines | Status |
-|--------|------------|----------|-----------|-------|--------|
-| **Overall** | 14.57% | 9.31% | 17.24% | 14.74% | ✅ |
-| **ToolRegistry** | 100% | 90% | 100% | 100% | 🏆 Excellent |
-| **MCP Client** | 65.18% | 50% | 50% | 66.66% | 👍 Good |
-| **MCP Transport** | 48.14% | 40.42% | 36.84% | 47.64% | 📈 Improving |
-
-**Total Tests:** 209 tests (100% passing)
-
-## 📖 API Reference
-
 ### Core SDK Methods
 
 | Method | Description | Example |
 |--------|-------------|---------|
 | `createSDK()` | Create SDK instance | `const sdk = createSDK()` |
-| `sdk.executeIntent()` | Execute intent-driven workflow | `await sdk.executeIntent("Analyze project")` |
-| `sdk.parseAndPlan()` | Parse intent and create plan | `await sdk.parseAndPlan("Complex task")` |
+| `sdk.executeWorkflowWithTracking()` | Execute intent-driven workflow with tracking | `await sdk.executeWorkflowWithTracking("Analyze project")` |
+| `sdk.parseAndPlanWorkflow()` | Parse intent and create plan | `await sdk.parseAndPlanWorkflow("Complex task")` |
 | `sdk.configureAI()` | Configure AI provider | `await sdk.configureAI(config)` |
 | `sdk.connectMCPServer()` | Connect to MCP server | `await sdk.connectMCPServer(config)` |
 | `sdk.initCloudIntentEngine()` | Initialize intent engine | `await sdk.initCloudIntentEngine()` |
@@ -532,10 +519,10 @@ Start transforming natural language into executable workflows today!
 import { createSDK } from '@mcpilotx/intentorch';
 
 const sdk = createSDK();
-const future = await sdk.executeIntent(
+const future = await sdk.executeWorkflowWithTracking(
   "What amazing things can I build with IntentOrch?"
 );
-console.log(future.answer);
+console.log(future.result);
 ```
 
 ---

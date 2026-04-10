@@ -2,8 +2,8 @@
  * Tests for SDK core functionality
  */
 
-import { IntentOrchSDK } from '../src/sdk';
-import { createMockSDK, createMockToolResult, createMockLogger } from './test-utils';
+const { IntentOrchSDK } = require('../src/sdk');
+const { createMockSDK, createMockToolResult, createMockLogger } = require('./test-utils');
 
 describe('SDK Core Functionality', () => {
   describe('SDK Initialization', () => {

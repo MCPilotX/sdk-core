@@ -34,7 +34,7 @@ IntentOrch 处理所有这些复杂性，让您可以专注于构建出色的应
 ### 🤖 **意图驱动的工作流**
 ```typescript
 // 告诉IntentOrch您想要完成什么
-const result = await sdk.executeIntent(
+const result = await sdk.executeWorkflowWithTracking(
   "分析README.md文件并提出改进建议"
 );
 // IntentOrch将：解析意图、选择工具、执行步骤、返回结果
@@ -101,13 +101,13 @@ await sdk.connectMCPServer({
 });
 
 // 执行您的第一个意图驱动工作流
-const result = await sdk.executeIntent(
+const result = await sdk.executeWorkflowWithTracking(
   "读取package.json文件并告诉我它有哪些依赖"
 );
 
 console.log('工作流完成！');
-console.log('回答:', result.answer);
-console.log('使用的工具:', result.toolCalls?.length || 0);
+console.log('回答:', result.result);
+console.log('使用的工具:', result.statistics?.successfulSteps || 0);
 ```
 
 ### 快速测试脚本
@@ -169,22 +169,22 @@ IntentOrch使用LLM理解自然语言指令并将其分解为原子意图：
 IntentOrch创建并执行依赖感知的工作流：
 
 ```typescript
-const workflow = await sdk.parseAndPlan(
+const workflow = await sdk.parseAndPlanWorkflow(
   "克隆仓库、分析代码并生成文档"
 );
-// 返回：{ steps: 3, dependencies: [...], estimatedTime: "2m" }
+// 返回：{ plan: { query: "...", parsedIntents: [...], dependencies: [...], estimatedSteps: 3 } }
 ```
 
 ### 4. 带跟踪的执行
 监控工作流执行的每个步骤：
 
 ```typescript
-const result = await sdk.executeIntentWithTracking(
+const result = await sdk.executeWorkflowWithTracking(
   "处理用户数据并生成报告",
   {
-    onStepStart: (step) => console.log(`开始：${step.intentDescription}`),
-    onStepComplete: (step) => console.log(`完成，耗时 ${step.duration}ms`),
-    onError: (error, step) => console.log(`失败：${step.toolName}`)
+    onStepStarted: (step) => console.log(`开始：${step.intentDescription}`),
+    onStepCompleted: (step) => console.log(`完成，耗时 ${step.duration}ms`),
+    onStepFailed: (error, step) => console.log(`失败：${step.toolName}`)
   }
 );
 ```
@@ -215,7 +215,7 @@ async function analyzeProject() {
   });
   
   // 执行意图驱动分析
-  const result = await sdk.executeIntent(`
+  const result = await sdk.executeWorkflowWithTracking(`
     分析这个TypeScript项目：
     1. 读取src/目录中的所有.ts文件
     2. 识别主要的架构模式
@@ -258,7 +258,7 @@ async function multiServerWorkflow() {
   });
   
   // 使用多个服务器的复杂意图
-  const result = await sdk.executeIntent(`
+  const result = await sdk.executeWorkflowWithTracking(`
     分析这个项目的git历史：
     1. 获取最近的提交
     2. 检查哪些文件更改最频繁
@@ -303,7 +303,7 @@ async function customToolWorkflow() {
   });
   
   // 在意图执行中使用自定义工具
-  const result = await sdk.executeIntent(
+  const result = await sdk.executeWorkflowWithTracking(
     "计算src/sdk.ts的代码指标并提出重构建议"
   );
   
@@ -442,16 +442,6 @@ npm run build
 npm run examples
 ```
 
-### 当前测试状态
-
-| 模块 | 语句覆盖率 | 分支覆盖率 | 函数覆盖率 | 行覆盖率 | 状态 |
-|------|------------|------------|------------|----------|------|
-| **整体** | 14.57% | 9.31% | 17.24% | 14.74% | ✅ |
-| **ToolRegistry** | 100% | 90% | 100% | 100% | 🏆 优秀 |
-| **MCP Client** | 65.18% | 50% | 50% | 66.66% | 👍 良好 |
-| **MCP Transport** | 48.14% | 40.42% | 36.84% | 47.64% | 📈 提升中 |
-
-**测试总数：** 209个测试（100%通过）
 
 ## 📖 API参考
 
@@ -460,8 +450,8 @@ npm run examples
 | 方法 | 描述 | 示例 |
 |------|------|------|
 | `createSDK()` | 创建SDK实例 | `const sdk = createSDK()` |
-| `sdk.executeIntent()` | 执行意图驱动的工作流 | `await sdk.executeIntent("分析项目")` |
-| `sdk.parseAndPlan()` | 解析意图并创建计划 | `await sdk.parseAndPlan("复杂任务")` |
+| `sdk.executeWorkflowWithTracking()` | 执行意图驱动的工作流（带跟踪） | `await sdk.executeWorkflowWithTracking("分析项目")` |
+| `sdk.parseAndPlanWorkflow()` | 解析意图并创建计划 | `await sdk.parseAndPlanWorkflow("复杂任务")` |
 | `sdk.configureAI()` | 配置AI提供商 | `await sdk.configureAI(config)` |
 | `sdk.connectMCPServer()` | 连接到MCP服务器 | `await sdk.connectMCPServer(config)` |
 | `sdk.initCloudIntentEngine()` | 初始化意图引擎 | `await sdk.initCloudIntentEngine()` |
@@ -532,10 +522,10 @@ Apache 2.0 - 查看 [LICENSE](../LICENSE) 了解详情。
 import { createSDK } from '@mcpilotx/intentorch';
 
 const sdk = createSDK();
-const future = await sdk.executeIntent(
+const future = await sdk.executeWorkflowWithTracking(
   "我能用IntentOrch构建什么令人惊叹的东西？"
 );
-console.log(future.answer);
+console.log(future.result);
 ```
 
 ---

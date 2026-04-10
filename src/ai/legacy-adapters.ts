@@ -15,10 +15,10 @@ import { IntentParserSelector } from './intent-parser-selector';
 export class EnhancedIntentEngineAdapter {
   private selector: IntentParserSelector;
   private config: any;
-  
+
   constructor(config: any = {}) {
     this.config = config;
-    
+
     // Initialize with hybrid parser as default (true to EnhancedIntentEngine's promise)
     this.selector = new IntentParserSelector({
       strategy: 'hybrid',
@@ -29,13 +29,13 @@ export class EnhancedIntentEngineAdapter {
           hybrid: {
             aiConfig: config.aiConfig,
             alwaysUseAI: config.alwaysUseAI || false,
-            ruleConfidenceThreshold: config.ruleConfidenceThreshold || 0.7
-          }
-        }
-      }
+            ruleConfidenceThreshold: config.ruleConfidenceThreshold || 0.7,
+          },
+        },
+      },
     });
   }
-  
+
   /**
    * Parse method matching EnhancedIntentEngine interface
    */
@@ -43,9 +43,9 @@ export class EnhancedIntentEngineAdapter {
     const context: ParserContext = {
       availableTools,
       useAI: true,
-      metadata: { legacyEngine: 'EnhancedIntentEngine' }
+      metadata: { legacyEngine: 'EnhancedIntentEngine' },
     };
-    
+
     try {
       const { result } = await this.selector.parseWithBestFit(query, context);
       return result;
@@ -53,7 +53,7 @@ export class EnhancedIntentEngineAdapter {
       return null;
     }
   }
-  
+
   /**
    * Update configuration
    */
@@ -70,21 +70,21 @@ export class EnhancedIntentEngineAdapter {
 export class IntentEngineAdapter {
   private factory: IntentParserFactory;
   private config: any;
-  
+
   constructor(config: any = {}) {
     this.config = config;
-    
+
     // Initialize with rule-based parser as default (true to IntentEngine's promise)
     this.factory = new IntentParserFactory({
       defaultParserType: 'rule',
       parserConfigs: {
         rule: {
-          confidenceThreshold: config.confidenceThreshold || 0.8
-        }
-      }
+          confidenceThreshold: config.confidenceThreshold || 0.8,
+        },
+      },
     });
   }
-  
+
   /**
    * Parse method matching IntentEngine interface
    */
@@ -92,9 +92,9 @@ export class IntentEngineAdapter {
     const context: ParserContext = {
       availableTools,
       useAI: false,
-      metadata: { legacyEngine: 'IntentEngine' }
+      metadata: { legacyEngine: 'IntentEngine' },
     };
-    
+
     try {
       const parser = this.factory.getParser('rule');
       const result = await parser.parse(query, context);
@@ -103,7 +103,7 @@ export class IntentEngineAdapter {
       return null;
     }
   }
-  
+
   /**
    * Update configuration
    */

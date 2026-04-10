@@ -33,31 +33,31 @@ export class HybridAIParser extends BaseIntentParser {
   private aiEnabled: boolean = false;
   private alwaysUseAI: boolean;
   private ruleConfidenceThreshold: number;
-  
+
   constructor(config: HybridAIParserConfig = {}) {
     super({
       confidenceThreshold: 0.6, // Lower threshold since AI can improve confidence
-      ...config
+      ...config,
     });
-    
+
     this.alwaysUseAI = config.alwaysUseAI || false;
     this.ruleConfidenceThreshold = config.ruleConfidenceThreshold || 0.7;
-    
+
     // Initialize rule-based parser
     this.ruleParser = new RuleBasedParser({
-      confidenceThreshold: this.ruleConfidenceThreshold
+      confidenceThreshold: this.ruleConfidenceThreshold,
     });
-    
+
     // Initialize AI service if config provided
     if (config.aiConfig) {
       this.initializeAIService(config.aiConfig);
     }
   }
-  
+
   getParserType(): ParserType {
     return 'hybrid';
   }
-  
+
   /**
    * Initialize AI service
    */
@@ -72,60 +72,60 @@ export class HybridAIParser extends BaseIntentParser {
       this.aiEnabled = false;
     }
   }
-  
+
   /**
    * Parse query using hybrid approach
    */
   async parse(query: string, context?: ParserContext): Promise<IntentResult> {
     this.logParsingAttempt(query, context);
-    
+
     const { result, duration } = await this.measureExecutionTime(
       () => this.parseInternal(query, context),
-      'hybrid AI parsing'
+      'hybrid AI parsing',
     );
-    
+
     this.logParsingResult(result, duration);
     return result;
   }
-  
+
   /**
    * Internal parsing logic with hybrid approach
    */
   private async parseInternal(query: string, context?: ParserContext): Promise<IntentResult> {
     const useAI = this.shouldUseAI(context) && this.aiEnabled;
-    
+
     // If AI is disabled or not allowed, use rule-based only
     if (!useAI) {
       return this.parseWithRulesOnly(query, context);
     }
-    
+
     // If configured to always use AI, skip rule-based parsing
     if (this.alwaysUseAI) {
       return this.parseWithAI(query, context);
     }
-    
+
     // Hybrid approach: try rules first, fallback to AI if needed
     return this.parseWithHybridApproach(query, context);
   }
-  
+
   /**
    * Parse using only rule-based approach
    */
-   private async parseWithRulesOnly(query: string, context?: ParserContext): Promise<IntentResult> {
-     const ruleResult = await this.ruleParser.parse(query, context);
-     
-     // Add parser type metadata
-     return {
-       ...ruleResult,
-       parserType: this.getParserType(),
-       metadata: {
-         ...(ruleResult.metadata || {}),
-         aiUsed: false,
-         fallbackReason: 'AI disabled or not allowed'
-       }
-     };
-   }
-  
+  private async parseWithRulesOnly(query: string, context?: ParserContext): Promise<IntentResult> {
+    const ruleResult = await this.ruleParser.parse(query, context);
+
+    // Add parser type metadata
+    return {
+      ...ruleResult,
+      parserType: this.getParserType(),
+      metadata: {
+        ...(ruleResult.metadata || {}),
+        aiUsed: false,
+        fallbackReason: 'AI disabled or not allowed',
+      },
+    };
+  }
+
   /**
    * Parse using only AI approach
    */
@@ -134,11 +134,11 @@ export class HybridAIParser extends BaseIntentParser {
       logger.warn('[HybridAIParser] AI service not available, falling back to rules');
       return this.parseWithRulesOnly(query, context);
     }
-    
+
     try {
       // Use AI's analyzeIntent method which includes LLM fallback
       const aiIntent = await this.aiService.analyzeIntent(query);
-      
+
       // Convert AI Intent to IntentResult
       const result: IntentResult = {
         service: this.mapActionToService(aiIntent.action),
@@ -150,14 +150,14 @@ export class HybridAIParser extends BaseIntentParser {
           aiUsed: true,
           aiProvider: 'AI',
           originalAction: aiIntent.action,
-          originalTarget: aiIntent.target
-        }
+          originalTarget: aiIntent.target,
+        },
       };
-      
+
       return result;
     } catch (error) {
       logger.error(`[HybridAIParser] AI parsing failed: ${error}`);
-      
+
       // Fallback to rule-based parsing
       const fallbackResult = await this.parseWithRulesOnly(query, context);
       return {
@@ -165,19 +165,19 @@ export class HybridAIParser extends BaseIntentParser {
         metadata: {
           ...(fallbackResult.metadata || {}),
           aiUsed: false,
-          aiError: error instanceof Error ? error.message : String(error)
-        }
+          aiError: error instanceof Error ? error.message : String(error),
+        },
       };
     }
   }
-  
+
   /**
    * Hybrid parsing: rules first, AI fallback
    */
   private async parseWithHybridApproach(query: string, context?: ParserContext): Promise<IntentResult> {
     // Step 1: Try rule-based parsing
     const ruleResult = await this.ruleParser.parse(query, context);
-    
+
     // Step 2: Check if rule-based result is good enough
     if (this.isRuleResultAcceptable(ruleResult)) {
       return {
@@ -186,17 +186,17 @@ export class HybridAIParser extends BaseIntentParser {
         metadata: {
           ...(ruleResult.metadata || {}),
           aiUsed: false,
-          decision: 'rule_based_sufficient'
-        }
+          decision: 'rule_based_sufficient',
+        },
       };
     }
-    
+
     // Step 3: Rule-based result not good enough, try AI
     logger.debug(`[HybridAIParser] Rule-based confidence ${ruleResult.confidence} below threshold, trying AI`);
-    
+
     try {
       const aiResult = await this.parseWithAI(query, context);
-      
+
       // Step 4: Compare AI result with rule-based result
       if (this.shouldUseAIResult(aiResult, ruleResult)) {
         return {
@@ -205,8 +205,8 @@ export class HybridAIParser extends BaseIntentParser {
             ...(aiResult.metadata || {}),
             decision: 'ai_better',
             ruleBasedConfidence: ruleResult.confidence,
-            aiConfidence: aiResult.confidence
-          }
+            aiConfidence: aiResult.confidence,
+          },
         };
       } else {
         // AI result not better, use rule-based with AI insights
@@ -220,8 +220,8 @@ export class HybridAIParser extends BaseIntentParser {
             aiUsed: true,
             decision: 'rule_based_with_ai_validation',
             aiValidated: true,
-            originalAiConfidence: aiResult.confidence
-          }
+            originalAiConfidence: aiResult.confidence,
+          },
         };
       }
     } catch (aiError) {
@@ -234,12 +234,12 @@ export class HybridAIParser extends BaseIntentParser {
           ...(ruleResult.metadata || {}),
           aiUsed: false,
           decision: 'ai_failed_fallback_to_rules',
-          aiError: aiError instanceof Error ? aiError.message : String(aiError)
-        }
+          aiError: aiError instanceof Error ? aiError.message : String(aiError),
+        },
       };
     }
   }
-  
+
   /**
    * Check if rule-based result is acceptable
    */
@@ -248,16 +248,16 @@ export class HybridAIParser extends BaseIntentParser {
     if (result.confidence >= this.ruleConfidenceThreshold) {
       return true;
     }
-    
+
     // Check if it's a fallback/unknown result
     if (result.service === 'unknown' || result.method === 'unknown') {
       return false;
     }
-    
+
     // Additional checks can be added here
     return false;
   }
-  
+
   /**
    * Decide whether to use AI result over rule-based result
    */
@@ -266,22 +266,22 @@ export class HybridAIParser extends BaseIntentParser {
     if (aiResult.confidence > ruleResult.confidence + 0.2) {
       return true;
     }
-    
+
     // If rule-based result is unknown but AI found something
     if (ruleResult.service === 'unknown' && aiResult.service !== 'unknown') {
       return true;
     }
-    
+
     // If AI extracted parameters but rule-based didn't
     const aiHasParams = Object.keys(aiResult.parameters || {}).length > 0;
     const ruleHasParams = Object.keys(ruleResult.parameters || {}).length > 0;
     if (aiHasParams && !ruleHasParams) {
       return true;
     }
-    
+
     return false;
   }
-  
+
   /**
    * Map AI action to service name
    */
@@ -294,12 +294,12 @@ export class HybridAIParser extends BaseIntentParser {
       'start': 'process',
       'stop': 'process',
       'calculate': 'calculator',
-      'unknown': 'unknown'
+      'unknown': 'unknown',
     };
-    
+
     return actionToService[action] || action;
   }
-  
+
   /**
    * Update AI configuration
    */
@@ -312,14 +312,14 @@ export class HybridAIParser extends BaseIntentParser {
       throw error;
     }
   }
-  
+
   /**
    * Check if AI service is available
    */
   isAIAvailable(): boolean {
     return this.aiEnabled && this.aiService !== null;
   }
-  
+
   /**
    * Enable or disable AI usage
    */
@@ -327,7 +327,7 @@ export class HybridAIParser extends BaseIntentParser {
     this.aiEnabled = enabled;
     logger.debug(`[HybridAIParser] AI usage ${enabled ? 'enabled' : 'disabled'}`);
   }
-  
+
   /**
    * Set whether to always use AI
    */
@@ -335,7 +335,7 @@ export class HybridAIParser extends BaseIntentParser {
     this.alwaysUseAI = alwaysUseAI;
     logger.debug(`[HybridAIParser] Always use AI: ${alwaysUseAI}`);
   }
-  
+
   /**
    * Get the underlying rule parser for customization
    */

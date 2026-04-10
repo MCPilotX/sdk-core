@@ -11,13 +11,13 @@ import { Tool } from '../mcp/types';
 export interface Intent {
   /** Action to perform (e.g., "read", "write", "search") */
   action: string;
-  
+
   /** Target of the action (e.g., "file", "directory", "database") */
   target: string;
-  
+
   /** Additional parameters for the intent */
   parameters?: Record<string, any>;
-  
+
   /** Context information */
   context?: {
     user?: Record<string, any>;
@@ -33,22 +33,22 @@ export interface Intent {
 export interface IntentResult {
   /** Service name (e.g., "filesystem", "calculator") */
   service: string;
-  
+
   /** Method name (e.g., "read", "calculate") */
   method: string;
-  
+
   /** Parameters for the method */
   parameters: Record<string, any>;
-  
+
   /** Confidence score (0-1) */
   confidence: number;
-  
+
   /** Parser type that produced this result */
   parserType?: string;
-  
+
   /** Error message if parsing failed */
   error?: string;
-  
+
   /** Additional metadata */
   metadata?: {
     aiUsed?: boolean;
@@ -64,16 +64,16 @@ export interface IntentResult {
 export interface OrchestrationContext {
   /** Available tools for matching */
   availableTools: string[];
-  
+
   /** User context (preferences, history, etc.) */
   userContext?: Record<string, any>;
-  
+
   /** System context (environment, constraints, etc.) */
   systemContext?: Record<string, any>;
-  
+
   /** Execution history */
   executionHistory?: any[];
-  
+
   /** User preferences */
   preferences?: Record<string, any>;
 }

@@ -1,6 +1,6 @@
 /**
  * IntentOrch AI Tool
- * 
+ *
  * Tool implementation for processing intentorch_ai_summary intents
  * Generates Markdown-formatted summaries using AI
  */
@@ -56,30 +56,30 @@ export class IntentorchAITool {
       analysisType?: 'summary' | 'review' | 'analysis';
       temperature?: number;
       maxTokens?: number;
-    }
+    },
   ): Promise<IntentorchAIToolResult> {
     const startTime = Date.now();
-    
+
     try {
       logger.info(`[IntentorchAITool] Executing AI summary with context type: ${typeof context}`);
       logger.debug(`[IntentorchAITool] Context value: ${JSON.stringify(context, null, 2).substring(0, 200)}...`);
-      
+
       // Build prompt based on analysis type
       const prompt = this.buildPrompt(context, options?.analysisType || 'summary');
-      
+
       logger.debug(`[IntentorchAITool] Generated prompt (first 300 chars): ${prompt.substring(0, 300)}...`);
-      
+
       // Call AI service - uses system-configured model
       const aiResponse = await this.ai.generateText(prompt, {
         temperature: options?.temperature || this.defaultTemperature,
         maxTokens: options?.maxTokens || this.defaultMaxTokens,
       });
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       logger.info(`[IntentorchAITool] AI summary generated in ${processingTime}ms`);
       logger.debug(`[IntentorchAITool] AI response (first 200 chars): ${aiResponse.substring(0, 200)}...`);
-      
+
       return {
         success: true,
         content: aiResponse,
@@ -87,19 +87,19 @@ export class IntentorchAITool {
         metadata: {
           generatedAt: new Date().toISOString(),
           processingTime,
-        }
+        },
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`[IntentorchAITool] Failed to generate AI summary: ${errorMessage}`);
-      
+
       return {
         success: false,
         content: `Error generating AI summary: ${errorMessage}`,
         format: options?.format || 'markdown',
         metadata: {
           generatedAt: new Date().toISOString(),
-        }
+        },
       };
     }
   }
@@ -108,8 +108,8 @@ export class IntentorchAITool {
    * Build prompt for AI analysis
    */
   private buildPrompt(context: any, analysisType: string): string {
-    const contextStr = typeof context === 'string' 
-      ? context 
+    const contextStr = typeof context === 'string'
+      ? context
       : JSON.stringify(context, null, 2);
 
     const prompts = {
@@ -161,7 +161,7 @@ ${contextStr}
 4. Provide insights and interpretations
 5. Use Markdown formatting to organize the analysis
 
-Please output only the analysis in Markdown format.`
+Please output only the analysis in Markdown format.`,
     };
 
     return prompts[analysisType as keyof typeof prompts] || prompts.summary;
@@ -174,21 +174,21 @@ Please output only the analysis in Markdown format.`
     if (context === undefined || context === null) {
       return {
         valid: false,
-        error: 'Context is undefined or null'
+        error: 'Context is undefined or null',
       };
     }
 
     if (typeof context === 'string' && context.trim().length === 0) {
       return {
         valid: false,
-        error: 'Context string is empty'
+        error: 'Context string is empty',
       };
     }
 
     if (typeof context === 'object' && Object.keys(context).length === 0) {
       return {
         valid: false,
-        error: 'Context object is empty'
+        error: 'Context object is empty',
       };
     }
 
@@ -214,8 +214,8 @@ Please output only the analysis in Markdown format.`
           type: 'ai_summary',
           content: result.content,
           format: result.format,
-          source: 'intentorch_ai_tool'
-        }
+          source: 'intentorch_ai_tool',
+        },
       };
     } else {
       return {
@@ -225,8 +225,8 @@ Please output only the analysis in Markdown format.`
         workflowResult: {
           type: 'error',
           error: result.content,
-          source: 'intentorch_ai_tool'
-        }
+          source: 'intentorch_ai_tool',
+        },
       };
     }
   }
@@ -240,7 +240,7 @@ export function getIntentorchAITool(ai: AI): IntentorchAITool {
     instance = new IntentorchAITool({
       ai,
       defaultTemperature: 0.3,
-      defaultMaxTokens: 2048
+      defaultMaxTokens: 2048,
     });
   }
   return instance;

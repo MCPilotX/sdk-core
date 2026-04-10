@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@mcpilotx/intentorch": "^0.6.0"
+  }
+}

@@ -122,9 +122,9 @@ export class MCPClient extends EventEmitter {
   async callTool(toolName: string, arguments_: Record<string, any>): Promise<ToolResult> {
     // Get tool definition to understand parameter schema
     const tool = this.findTool(toolName);
-    
+
     let mappedArguments = arguments_;
-    
+
     // If tool definition is available, use ParameterMapper to normalize parameters
     if (tool) {
       try {
@@ -136,7 +136,7 @@ export class MCPClient extends EventEmitter {
         console.warn(`Parameter mapping failed for tool "${toolName}":`, error instanceof Error ? error.message : String(error));
       }
     }
-    
+
     const response = await this.sendRequest(MCP_METHODS.TOOLS_CALL, {
       name: toolName,
       arguments: mappedArguments,

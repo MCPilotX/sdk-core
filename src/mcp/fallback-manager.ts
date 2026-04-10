@@ -68,13 +68,13 @@ export class FallbackManager {
       description: 'Try alternative tool names when primary tool fails',
       priority: 10,
       condition: (error, toolCall, attemptCount) => {
-        return error?.message?.includes('not found') || 
+        return error?.message?.includes('not found') ||
                error?.message?.includes('not available') ||
                attemptCount === 1;
       },
       action: async (toolCall, context) => {
         const toolName = toolCall.name;
-        
+
         // Extract intent from tool name (simplified)
         const intent = this.extractIntentFromToolName(toolName);
         if (!intent) {
@@ -90,7 +90,7 @@ export class FallbackManager {
         const alternative = toolMappingManager.findAlternativeTool(
           intent.action,
           intent.target,
-          context.availableTools
+          context.availableTools,
         );
 
         if (!alternative) {
@@ -138,7 +138,7 @@ export class FallbackManager {
       },
       action: async (toolCall, context) => {
         const simplifiedArgs = this.simplifyParameters(toolCall.arguments);
-        
+
         const newToolCall: ToolCall = {
           name: toolCall.name,
           arguments: simplifiedArgs,
@@ -208,7 +208,7 @@ export class FallbackManager {
       },
       action: async (toolCall, context) => {
         const degradedToolCall = this.degradeOperation(toolCall);
-        
+
         if (this.options.logFallbacks) {
           console.log(`Fallback: Degraded operation for tool "${toolCall.name}"`);
         }
@@ -233,7 +233,7 @@ export class FallbackManager {
       },
       action: async (toolCall, context) => {
         const suggestions = this.generateSuggestions(toolCall, context.errors);
-        
+
         const result: ToolResult = {
           content: [{
             type: 'text',
@@ -344,7 +344,7 @@ export class FallbackManager {
       delete singleArgs.batch;
       delete singleArgs.multiple;
       delete singleArgs.concurrent;
-      
+
       return {
         name: toolCall.name.replace(/batch|multiple|concurrent/gi, '').trim() || toolCall.name,
         arguments: singleArgs,
@@ -364,7 +364,7 @@ export class FallbackManager {
   async executeWithFallback(
     toolCall: ToolCall,
     executeFn: (toolCall: ToolCall) => Promise<ToolResult>,
-    availableTools: string[] = []
+    availableTools: string[] = [],
   ): Promise<ToolResult> {
     const context: FallbackContext = {
       originalToolCall: toolCall,
@@ -382,7 +382,7 @@ export class FallbackManager {
     try {
       const result = await executeFn(currentToolCall);
       lastResult = result;
-      
+
       if (!result.isError) {
         return result;
       }
@@ -397,27 +397,27 @@ export class FallbackManager {
 
     // Apply fallback strategies in priority order
     const sortedStrategies = this.getSortedStrategies();
-    
+
     for (const strategy of sortedStrategies) {
       if (strategy.condition(lastError, currentToolCall, context.attemptCount)) {
         try {
           const fallbackResult = await strategy.action(currentToolCall, context);
-          
+
           if (fallbackResult.success) {
             if (this.options.logFallbacks) {
               console.log(`Fallback strategy "${strategy.name}" succeeded: ${fallbackResult.message}`);
             }
-            
+
             // Record degradation if applicable
             if (fallbackResult.degraded) {
               console.log(`Operation degraded: ${fallbackResult.message}`);
             }
-            
+
             // Update tool call if strategy modified it
             if (fallbackResult.toolCall) {
               currentToolCall = fallbackResult.toolCall;
             }
-            
+
             // Try execution with the new/modified tool call
             try {
               const result = await executeFn(currentToolCall);
@@ -430,7 +430,7 @@ export class FallbackManager {
               lastError = error;
               context.errors.push(error);
             }
-            
+
             context.attemptCount++;
             continue; // Try next strategy
           } else {
@@ -439,10 +439,10 @@ export class FallbackManager {
             }
             lastError = fallbackResult.message;
             context.errors.push(fallbackResult.message);
-            
+
             // Only update tool call if strategy succeeded
             // Don't update for failed strategies
-            
+
             // Increment attempt count for failed strategy
             context.attemptCount++;
           }
@@ -451,7 +451,7 @@ export class FallbackManager {
           context.errors.push(error);
         }
       }
-      
+
       // Check if we've exceeded max attempts
       if (context.attemptCount >= (this.options.maxAttempts || 3)) {
         break;
@@ -476,7 +476,7 @@ export class FallbackManager {
   private generateComprehensiveFailureMessage(context: FallbackContext, lastResult: ToolResult | null): string {
     const errors = context.errors.map((e, i) => `  ${i + 1}. ${e instanceof Error ? e.message : String(e)}`);
     const suggestions = this.generateSuggestions(context.originalToolCall, context.errors);
-    
+
     return `Tool execution failed after ${context.attemptCount} attempts.
 
 Errors encountered:
@@ -490,39 +490,39 @@ ${suggestions}`;
    */
   private generateSuggestions(toolCall: ToolCall, errors: any[]): string {
     const suggestions: string[] = [];
-    
+
     // Analyze errors for specific suggestions
     const errorText = errors.map(e => String(e)).join(' ').toLowerCase();
-    
+
     if (errorText.includes('not found') || errorText.includes('not available') || errorText.includes('cannot extract intent')) {
       suggestions.push('• Check if the tool is properly registered');
       suggestions.push('• Verify tool name spelling');
       suggestions.push('• Try alternative tool names');
     }
-    
+
     if (errorText.includes('parameter') || errorText.includes('argument') || errorText.includes('validation')) {
       suggestions.push('• Check parameter names and types');
       suggestions.push('• Provide required parameters');
       suggestions.push('• Simplify complex parameters');
     }
-    
+
     if (errorText.includes('timeout') || errorText.includes('timed out') || errorText.includes('network')) {
       suggestions.push('• Check network connectivity');
       suggestions.push('• Increase timeout value');
       suggestions.push('• Try again later');
     }
-    
+
     if (errorText.includes('permission') || errorText.includes('access')) {
       suggestions.push('• Check file permissions');
       suggestions.push('• Run with appropriate privileges');
       suggestions.push('• Verify access rights');
     }
-    
+
     // General suggestions
     suggestions.push('• Use --help to see tool documentation');
     suggestions.push('• Try a simpler version of the operation');
     suggestions.push('• Check system resources and dependencies');
-    
+
     return `Suggestions:\n${suggestions.join('\n')}`;
   }
 

@@ -235,7 +235,7 @@ export class ToolRegistry {
     return await defaultFallbackManager.executeWithFallback(
       toolCall,
       executeFn,
-      availableToolNames
+      availableToolNames,
     );
   }
 
@@ -336,7 +336,7 @@ export class ToolRegistry {
   private validateToolArguments(tool: Tool, args: Record<string, any>): void {
     const schema = tool.inputSchema;
     const toolName = tool.name;
-    
+
     try {
       // Use PreExecutionValidator for comprehensive validation
       const validator = new PreExecutionValidator({
@@ -344,23 +344,23 @@ export class ToolRegistry {
         enforceRequired: ParameterMapper.getConfig().enforceRequired,
         logWarnings: ParameterMapper.getConfig().logWarnings,
       });
-      
+
       const validationResult = validator.validate(toolName, schema, args);
-      
+
       // Update the arguments with normalized parameters
       Object.keys(args).forEach(key => delete args[key]);
       Object.assign(args, validationResult.normalizedArgs);
-      
+
       // Log warnings if any
       if (validationResult.warnings.length > 0) {
         console.warn(`Parameter warnings for tool "${toolName}":`, validationResult.warnings);
       }
-      
+
       // Log suggestions if any
       if (validationResult.suggestions.length > 0) {
         console.info(`Parameter suggestions for tool "${toolName}":`, validationResult.suggestions);
       }
-      
+
       // If validation failed, throw error with detailed information
       if (!validationResult.success) {
         const errorMessage = [
@@ -383,7 +383,7 @@ export class ToolRegistry {
 
         throw new Error(errorMessage);
       }
-      
+
     } catch (error) {
       // If validation throws an error, provide detailed error message
       const errorMessage = [
@@ -398,8 +398,8 @@ export class ToolRegistry {
         ...Object.entries(args).map(([key, value]) => `  - ${key}: ${typeof value} = ${JSON.stringify(value)}`),
         '',
         'Parameter mapping suggestions:',
-        ...ParameterMapper.getMappingSuggestions(toolName, schema).map(m => 
-          `  - Use "${m.sourceName}" for "${m.targetName}"`
+        ...ParameterMapper.getMappingSuggestions(toolName, schema).map(m =>
+          `  - Use "${m.sourceName}" for "${m.targetName}"`,
         ),
       ].join('\n');
 

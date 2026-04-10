@@ -45,17 +45,17 @@ export interface IntentParser {
    * @returns Parsed intent result
    */
   parse(query: string, context?: ParserContext): Promise<IntentResult>;
-  
+
   /**
    * Get the type of this parser
    */
   getParserType(): ParserType;
-  
+
   /**
    * Get the confidence threshold for this parser
    */
   getConfidenceThreshold(): number;
-  
+
   /**
    * Update parser configuration
    */
@@ -65,7 +65,7 @@ export interface IntentParser {
 /**
  * Parser selection strategy
  */
-export type ParserSelectionStrategy = 
+export type ParserSelectionStrategy =
   | 'fastest'      // Use the fastest parser that meets confidence threshold
   | 'most_accurate' // Use the most accurate parser regardless of speed
   | 'hybrid'       // Try rule-based first, fallback to AI
