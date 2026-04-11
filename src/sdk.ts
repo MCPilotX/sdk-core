@@ -1804,8 +1804,8 @@ Use Markdown format for the analysis.`,
   /**
    * Get SDK version
    */
-  getVersion(): string {
-    return getPackageVersion();
+  async getVersion(): Promise<string> {
+    return await getPackageVersion();
   }
 
   /**

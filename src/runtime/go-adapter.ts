@@ -1,6 +1,6 @@
 import { RuntimeAdapter } from './adapter';
 import { ServiceConfig } from '../core/types';
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, execSync, type ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -21,7 +21,6 @@ export class GoAdapter implements RuntimeAdapter {
 
     // Check if Go is installed
     try {
-      const { execSync } = require('child_process');
       execSync('go version', { stdio: 'ignore' });
       console.log('[Go] Go is installed');
     } catch (error) {
@@ -35,7 +34,6 @@ export class GoAdapter implements RuntimeAdapter {
     if (!fs.existsSync(goModPath)) {
       console.log(`[Go] go.mod not found, creating basic go.mod for ${config.name}`);
       try {
-        const { execSync } = require('child_process');
         execSync(`go mod init ${config.name}`, {
           stdio: 'inherit',
           cwd: servicePath,
@@ -48,7 +46,6 @@ export class GoAdapter implements RuntimeAdapter {
     // Download dependencies
     console.log('[Go] Downloading dependencies...');
     try {
-      const { execSync } = require('child_process');
       execSync('go mod tidy', {
         stdio: 'inherit',
         cwd: servicePath,
@@ -62,7 +59,6 @@ export class GoAdapter implements RuntimeAdapter {
     if (config.build) {
       console.log('[Go] Building executable...');
       try {
-        const { execSync } = require('child_process');
         const outputName = config.output || config.name;
         execSync(`go build -o ${outputName} ${config.entry}`, {
           stdio: 'inherit',
@@ -181,7 +177,6 @@ export class GoAdapter implements RuntimeAdapter {
     console.log(`[Go] Compiling service: ${config.name}`);
 
     try {
-      const { execSync } = require('child_process');
       const outputName = config.output || config.name;
       execSync(`go build -o ${outputName} ${config.entry}`, {
         stdio: 'inherit',
@@ -199,7 +194,6 @@ export class GoAdapter implements RuntimeAdapter {
     console.log(`[Go] Running tests for service: ${config.name}`);
 
     try {
-      const { execSync } = require('child_process');
       execSync('go test ./...', {
         stdio: 'inherit',
         cwd: config.path || '.',

@@ -1,6 +1,6 @@
 import { RuntimeAdapter } from './adapter';
 import { ServiceConfig } from '../core/types';
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, execSync, type ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -21,7 +21,6 @@ export class RustAdapter implements RuntimeAdapter {
 
     // Check if Rust is installed
     try {
-      const { execSync } = require('child_process');
       execSync('cargo --version', { stdio: 'ignore' });
       console.log('[Rust] Cargo is installed');
     } catch (error) {
@@ -42,7 +41,6 @@ export class RustAdapter implements RuntimeAdapter {
       } else {
         console.log(`[Rust] Creating basic Cargo.toml for ${config.name}`);
         try {
-          const { execSync } = require('child_process');
           execSync(`cargo init --name ${config.name} --bin`, {
             stdio: 'inherit',
             cwd: servicePath,
@@ -56,7 +54,6 @@ export class RustAdapter implements RuntimeAdapter {
     // Build project
     console.log('[Rust] Building project...');
     try {
-      const { execSync } = require('child_process');
       const rustConfig = config.runtimeConfig?.rust;
 
       if (rustConfig?.release) {
@@ -82,7 +79,6 @@ export class RustAdapter implements RuntimeAdapter {
     if (rustConfig?.test) {
       console.log('[Rust] Running tests...');
       try {
-        const { execSync } = require('child_process');
         execSync('cargo test', {
           stdio: 'inherit',
           cwd: servicePath,
@@ -130,7 +126,6 @@ export class RustAdapter implements RuntimeAdapter {
 
       console.log(`[Rust] Compiling single file: ${config.entry}`);
       try {
-        const { execSync } = require('child_process');
         execSync(`rustc ${config.entry} -o ${outputPath}`, {
           stdio: 'inherit',
           cwd: servicePath,
@@ -229,7 +224,6 @@ export class RustAdapter implements RuntimeAdapter {
     console.log(`[Rust] Compiling service: ${config.name}`);
 
     try {
-      const { execSync } = require('child_process');
       const rustConfig = config.runtimeConfig?.rust;
       const buildArgs = rustConfig?.release ? ['build', '--release'] : ['build'];
       execSync(`cargo ${buildArgs.join(' ')}`, {
@@ -248,7 +242,6 @@ export class RustAdapter implements RuntimeAdapter {
     console.log(`[Rust] Running tests for service: ${config.name}`);
 
     try {
-      const { execSync } = require('child_process');
       execSync('cargo test', {
         stdio: 'inherit',
         cwd: config.path || '.',
@@ -265,7 +258,6 @@ export class RustAdapter implements RuntimeAdapter {
     console.log(`[Rust] Running cargo check for service: ${config.name}`);
 
     try {
-      const { execSync } = require('child_process');
       execSync('cargo check', {
         stdio: 'inherit',
         cwd: config.path || '.',
@@ -282,7 +274,6 @@ export class RustAdapter implements RuntimeAdapter {
     console.log(`[Rust] Running cargo clippy for service: ${config.name}`);
 
     try {
-      const { execSync } = require('child_process');
       execSync('cargo clippy', {
         stdio: 'inherit',
         cwd: config.path || '.',

@@ -242,8 +242,8 @@ describe('SDK Enhanced Coverage Tests', () => {
   });
 
   describe('Utility Methods', () => {
-    it('should get SDK version', () => {
-      const version = sdk.getVersion();
+    it('should get SDK version', async () => {
+      const version = await sdk.getVersion();
       expect(typeof version).toBe('string');
       expect(version).toMatch(/^\d+\.\d+\.\d+$/); // Should be semver format
     });

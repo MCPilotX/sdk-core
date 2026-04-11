@@ -1,6 +1,6 @@
 import { RuntimeAdapter } from './adapter';
 import { ServiceConfig } from '../core/types';
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, execSync, type ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -62,7 +62,6 @@ export class DockerAdapter implements RuntimeAdapter {
 
     // Check if Docker is installed
     try {
-      const { execSync } = require('child_process');
       execSync('docker --version', { stdio: 'ignore' });
     } catch (error) {
       throw new Error('Docker is not installed or not in PATH');
@@ -71,13 +70,11 @@ export class DockerAdapter implements RuntimeAdapter {
     // Check if image exists, pull if not
     if (config.image) {
       try {
-        const { execSync } = require('child_process');
         execSync(`docker image inspect ${config.image}`, { stdio: 'ignore' });
         console.log(`[Docker] Image ${config.image} already exists`);
       } catch (error) {
         console.log(`[Docker] Pulling image: ${config.image}`);
         try {
-          const { execSync } = require('child_process');
           execSync(`docker pull ${config.image}`, { stdio: 'inherit' });
         } catch (pullError) {
           throw new Error(`Failed to pull Docker image ${config.image}: ${pullError.message}`);
@@ -91,7 +88,6 @@ export class DockerAdapter implements RuntimeAdapter {
       if (fs.existsSync(dockerfilePath)) {
         console.log(`[Docker] Building image from ${dockerfilePath}`);
         try {
-          const { execSync } = require('child_process');
           const buildContext = config.buildContext || path.dirname(dockerfilePath);
           execSync(`docker build -t ${config.name} -f ${dockerfilePath} ${buildContext}`, {
             stdio: 'inherit',
@@ -147,7 +143,6 @@ export class DockerAdapter implements RuntimeAdapter {
       console.log(`[Docker] Stopping container: ${this.containerName}`);
 
       try {
-        const { execSync } = require('child_process');
         execSync(`docker stop ${this.containerName}`, { stdio: 'ignore' });
       } catch (error) {
         // Container may already be stopped
@@ -164,7 +159,6 @@ export class DockerAdapter implements RuntimeAdapter {
     }
 
     try {
-      const { execSync } = require('child_process');
       const output = execSync(`docker ps -a --filter "name=${this.containerName}" --format "{{.Status}}"`, {
         encoding: 'utf-8',
       }).trim();
@@ -187,7 +181,6 @@ export class DockerAdapter implements RuntimeAdapter {
     }
 
     try {
-      const { execSync } = require('child_process');
       return execSync(`docker logs --tail ${tail} ${this.containerName}`, {
         encoding: 'utf-8',
       });

@@ -442,8 +442,8 @@ describe('SDK Branch Coverage Tests', () => {
   });
 
   describe('utility methods', () => {
-    it('should get SDK version', () => {
-      const version = sdk.getVersion();
+    it('should get SDK version', async () => {
+      const version = await sdk.getVersion();
       expect(typeof version).toBe('string');
     });
 
