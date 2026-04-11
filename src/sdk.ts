@@ -17,8 +17,8 @@ import { CloudIntentEngine, type CloudIntentEngineConfig } from './ai/cloud-inte
 import { MCPClient, ToolRegistry, createMCPConfig, discoverLocalMCPServers } from './mcp';
 import type { Tool, ToolCall, ToolResult, MCPClientConfig } from './mcp/types';
 
-// Package version
-import packageJson from '../package.json' assert { type: 'json' };
+// Package version utility - using compatible JSON import solution
+import { getPackageVersion } from './utils/package-info';
 
 export interface SDKOptions {
   configPath?: string;
@@ -1805,7 +1805,7 @@ Use Markdown format for the analysis.`,
    * Get SDK version
    */
   getVersion(): string {
-    return packageJson.version;
+    return getPackageVersion();
   }
 
   /**
