@@ -1,0 +1,17 @@
+{
+  "name": "12306-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mcpilotx/intentorch": "^0.7.2",
+    "12306-mcp": "^0.3.8",
+    "lodash": "^4.18.1"
+  }
+}
