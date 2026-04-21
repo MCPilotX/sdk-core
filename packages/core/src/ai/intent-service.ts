@@ -185,7 +185,7 @@ export class IntentService {
           type: 'tool', // Add type field for frontend compatibility
           serverId: serverId,
           toolName: toolSelection.toolName,
-          parameters: this.adaptParameters(atomicIntent.parameters, { name: toolSelection.toolName })
+          parameters: await this.adaptParameters(atomicIntent.parameters, { name: toolSelection.toolName })
         };
         
         steps.push(step);
@@ -261,121 +261,155 @@ export class IntentService {
     return 'generic-service';
   }
   
-  private adaptParameters(intentParams: Record<string, any>, tool: any): Record<string, any> {
-    const adapted: Record<string, any> = { ...intentParams };
+  private async adaptParameters(intentParams: Record<string, any>, tool: any): Promise<Record<string, any>> {
+    const toolName = tool.name || '';
     
-    // Basic parameter adaptation based on tool input schema
-    if (tool.inputSchema && tool.inputSchema.properties) {
-      const schemaProps = tool.inputSchema.properties;
+    console.log(`[IntentService] adaptParameters called for tool: "${toolName}"`);
+    console.log(`[IntentService] Intent params:`, JSON.stringify(intentParams, null, 2));
+    
+    const adapted: Record<string, any> = {};
+    
+    try {
+      // Get actual tool metadata from registry
+      const allTools = await this.toolRegistry.getAllTools();
+      const toolMetadata = allTools.find((t: any) => t.name === toolName);
       
-      // Enhanced parameter mappings with more variations
-      const parameterMappings: Record<string, string[]> = {
-        // Date parameters
-        'date': ['train_date', 'departure_date', 'date', 'time', 'datetime', 'timestamp', '出发日期', '查询日期'],
-        'train_date': ['date', 'departure_date', 'time', 'datetime', '出发日期'],
+      if (toolMetadata && toolMetadata.parameters) {
+        const actualSchema = toolMetadata.parameters;
+        const actualParamNames = Object.keys(actualSchema);
+        console.log(`[IntentService] Actual tool schema properties:`, actualParamNames);
         
-        // Location parameters
-        'from': ['from_station', 'origin', 'source', 'from', 'departure', '出发地', '起点'],
-        'fromStation': ['from_station', 'origin', 'source', 'from', 'departure', '出发地', '起点'],
-        'from_station': ['fromStation', 'origin', 'source', 'from', 'departure', '出发地', '起点'],
+        // Track which intent parameters have been mapped
+        const mappedIntentKeys = new Set<string>();
         
-        'to': ['to_station', 'destination', 'target', 'to', 'arrival', '到达地', '终点'],
-        'toStation': ['to_station', 'destination', 'target', 'to', 'arrival', '到达地', '终点'],
-        'to_station': ['toStation', 'destination', 'target', 'to', 'arrival', '到达地', '终点'],
-        
-        // General location
-        'location': ['city', 'place', 'location', 'address', '城市', '地点'],
-        'city': ['location', 'place', 'address', '城市'],
-        
-        // Search parameters
-        'query': ['search', 'term', 'keyword', 'q', '搜索词', '关键词'],
-        'search': ['query', 'term', 'keyword', 'q', '搜索词'],
-        
-        // Filter parameters
-        'filter': ['condition', 'criteria', '筛选条件', '过滤条件'],
-        'trainFilterFlags': ['filter', 'train_type', 'train_filter', '车次类型', '列车筛选']
-      };
-      
-      // First pass: direct matches and exact mappings
-      for (const [intentKey, intentValue] of Object.entries(intentParams)) {
-        // 1. Check direct match with schema property
-        if (schemaProps[intentKey]) {
-          adapted[intentKey] = intentValue;
-          continue;
-        }
-        
-        // 2. Check parameter mappings
-        let mapped = false;
-        for (const [schemaKey, possibleIntentKeys] of Object.entries(parameterMappings)) {
-          if (possibleIntentKeys.includes(intentKey) && schemaProps[schemaKey]) {
-            adapted[schemaKey] = intentValue;
-            mapped = true;
-            break;
+        // First pass: direct matches with actual parameter names
+        for (const [intentKey, intentValue] of Object.entries(intentParams)) {
+          console.log(`[IntentService] Processing intent parameter: "${intentKey}" = "${intentValue}"`);
+          
+          // 1. Check direct match with actual parameter name
+          if (actualSchema[intentKey]) {
+            adapted[intentKey] = intentValue;
+            mappedIntentKeys.add(intentKey);
+            console.log(`[IntentService]   ✓ Direct match: "${intentKey}" -> "${intentKey}" (actual schema)`);
+            continue;
           }
-        }
-        
-        // 3. If not mapped, try case-insensitive and underscore/hyphen variations
-        if (!mapped) {
+          
+          // 2. If not mapped, try case-insensitive and underscore/hyphen variations
+          let mapped = false;
           const intentKeyLower = intentKey.toLowerCase().replace(/[_-]/g, '');
-          for (const schemaKey of Object.keys(schemaProps)) {
+          for (const schemaKey of actualParamNames) {
             const schemaKeyLower = schemaKey.toLowerCase().replace(/[_-]/g, '');
             if (intentKeyLower === schemaKeyLower) {
               adapted[schemaKey] = intentValue;
+              mappedIntentKeys.add(intentKey);
+              console.log(`[IntentService]   ✓ Normalized match: "${intentKey}" -> "${schemaKey}" (after normalization)`);
               mapped = true;
               break;
             }
           }
+          
+          // 3. If still not mapped, try partial matches
+          if (!mapped) {
+            const intentKeyLower = intentKey.toLowerCase();
+            for (const schemaKey of actualParamNames) {
+              const schemaKeyLower = schemaKey.toLowerCase();
+              if (intentKeyLower.includes(schemaKeyLower) || schemaKeyLower.includes(intentKeyLower)) {
+                adapted[schemaKey] = intentValue;
+                mappedIntentKeys.add(intentKey);
+                console.log(`[IntentService]   ✓ Partial match: "${intentKey}" -> "${schemaKey}" (partial match)`);
+                mapped = true;
+                break;
+              }
+            }
+          }
+          
+          // 4. If still not mapped, try description matching
+          if (!mapped) {
+            for (const [schemaKey, paramSchema] of Object.entries(actualSchema)) {
+              const paramInfo = paramSchema as any;
+              // Check if intent key matches parameter description
+              if (paramInfo.description && paramInfo.description.toLowerCase().includes(intentKey.toLowerCase())) {
+                adapted[schemaKey] = intentValue;
+                mappedIntentKeys.add(intentKey);
+                console.log(`[IntentService]   ✓ Description match: "${intentKey}" -> "${schemaKey}" (via description)`);
+                mapped = true;
+                break;
+              }
+            }
+          }
+          
+          if (!mapped) {
+            console.log(`[IntentService]   ✗ No match found for parameter: "${intentKey}"`);
+          }
         }
         
-        // 4. If still not mapped, try partial matches
-        if (!mapped) {
-          const intentKeyLower = intentKey.toLowerCase();
-          for (const schemaKey of Object.keys(schemaProps)) {
-            const schemaKeyLower = schemaKey.toLowerCase();
-            if (intentKeyLower.includes(schemaKeyLower) || schemaKeyLower.includes(intentKeyLower)) {
-              adapted[schemaKey] = intentValue;
-              break;
+        // Remove any parameters that don't match the actual schema
+        // (e.g., remove from_station if we have fromStation)
+        const finalAdapted: Record<string, any> = {};
+        for (const [key, value] of Object.entries(adapted)) {
+          if (actualSchema[key]) {
+            finalAdapted[key] = value;
+          } else {
+            console.log(`[IntentService]   ✗ Removing parameter "${key}" - not in actual schema`);
+          }
+        }
+        
+        // Second pass: handle date format conversion for any parameter that looks like a date
+        for (const [key, value] of Object.entries(finalAdapted)) {
+          if (typeof value === 'string') {
+            // Check if this parameter name suggests it's a date
+            const keyLower = key.toLowerCase();
+            const isDateParam = keyLower.includes('date') || 
+                               keyLower.includes('time') ||
+                               keyLower.includes('day') ||
+                               keyLower.includes('month') ||
+                               keyLower.includes('year');
+            
+            // Also check if the value looks like a date
+            const looksLikeDate = this.looksLikeDate(value);
+            
+            if (isDateParam || looksLikeDate) {
+              const normalizedDate = this.normalizeDate(value);
+              if (normalizedDate !== value) {
+                finalAdapted[key] = normalizedDate;
+                console.log(`[IntentService] Normalized date parameter "${key}": "${value}" -> "${normalizedDate}"`);
+              }
             }
           }
         }
+        
+        // Third pass: ensure required parameters are present
+        this.ensureRequiredParameters(finalAdapted, actualSchema, toolName);
+        
+        console.log(`[IntentService] Final adapted parameters:`, JSON.stringify(finalAdapted, null, 2));
+        return finalAdapted;
+        
+      } else {
+        console.warn(`[IntentService] No metadata found for tool "${toolName}", using intent params as-is`);
+        // Fallback: filter intent params to only include valid ones
+        const filteredParams: Record<string, any> = {};
+        for (const [key, value] of Object.entries(intentParams)) {
+          // Keep the parameter if it looks reasonable
+          if (key && value !== undefined && value !== null) {
+            filteredParams[key] = value;
+          }
+        }
+        console.log(`[IntentService] Fallback parameters:`, JSON.stringify(filteredParams, null, 2));
+        return filteredParams;
       }
       
-      // Second pass: handle date format conversion for any parameter that looks like a date
-      for (const [key, value] of Object.entries(adapted)) {
-        if (typeof value === 'string') {
-          // Check if this parameter name suggests it's a date (expanded list)
-          const keyLower = key.toLowerCase();
-          const isDateParam = keyLower.includes('date') || 
-                             keyLower.includes('time') ||
-                             keyLower.includes('day') ||
-                             keyLower.includes('month') ||
-                             keyLower.includes('year') ||
-                             keyLower.includes('week') ||
-                             keyLower.includes('hour') ||
-                             keyLower.includes('minute') ||
-                             keyLower.includes('second') ||
-                             keyLower.includes('timestamp') ||
-                             keyLower.includes('datetime') ||
-                             keyLower.includes('出发日期') ||
-                             keyLower.includes('查询日期') ||
-                             keyLower.includes('日期') ||
-                             keyLower.includes('时间');
-          
-          // Also check if the value looks like a date (relative dates, Chinese dates, etc.)
-          const looksLikeDate = this.looksLikeDate(value);
-          
-          if (isDateParam || looksLikeDate) {
-            const normalizedDate = this.normalizeDate(value);
-            if (normalizedDate !== value) {
-              adapted[key] = normalizedDate;
-              console.log(`[IntentService] Normalized date parameter "${key}": "${value}" -> "${normalizedDate}"`);
-            }
-          }
+    } catch (error) {
+      console.warn(`[IntentService] Failed to get tool metadata for "${toolName}":`, error);
+      // Fallback to using intent params as-is (filtered)
+      const filteredParams: Record<string, any> = {};
+      for (const [key, value] of Object.entries(intentParams)) {
+        if (key && value !== undefined && value !== null) {
+          filteredParams[key] = value;
         }
       }
+      console.log(`[IntentService] Error fallback parameters:`, JSON.stringify(filteredParams, null, 2));
+      return filteredParams;
     }
-    
-    return adapted;
   }
   
   /**
@@ -611,6 +645,29 @@ export class IntentService {
     }
     
     return trimmed;
+  }
+  
+  /**
+   * Ensure required parameters are present
+   */
+  private ensureRequiredParameters(adaptedParams: Record<string, any>, actualSchema: Record<string, any>, toolName: string): void {
+    console.log(`[IntentService] Checking required parameters for tool: "${toolName}"`);
+    
+    const missingParams: string[] = [];
+    
+    for (const [paramName, paramSchema] of Object.entries(actualSchema)) {
+      const paramInfo = paramSchema as any;
+      if (paramInfo.required && !adaptedParams[paramName]) {
+        missingParams.push(paramName);
+        console.log(`[IntentService]   ⚠️  Missing required parameter: "${paramName}"`);
+      }
+    }
+    
+    if (missingParams.length > 0) {
+      console.log(`[IntentService]   ⚠️  Tool "${toolName}" requires parameters: ${missingParams.join(', ')}`);
+    } else {
+      console.log(`[IntentService]   ✓ All required parameters present for tool: "${toolName}"`);
+    }
   }
   
   private calculateConfidence(parseResult: any): number {

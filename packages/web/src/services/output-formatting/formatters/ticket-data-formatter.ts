@@ -23,28 +23,39 @@ export class TicketDataFormatter extends BaseFormatter {
 
   canFormat(data: any, context?: FormatContext): boolean {
     // Check if data matches ticket data pattern
-    if (!data || typeof data !== 'object') {
+    if (!data) {
       return false;
     }
 
-    // Pattern 1: Has tickets array
-    if (Array.isArray(data.tickets) && data.tickets.length > 0) {
-      const firstTicket = data.tickets[0];
-      return this.isTicketObject(firstTicket);
+    // Pattern 1: Has tickets array (structured JSON)
+    if (typeof data === 'object') {
+      if (Array.isArray(data.tickets) && data.tickets.length > 0) {
+        const firstTicket = data.tickets[0];
+        return this.isTicketObject(firstTicket);
+      }
+
+      // Pattern 2: Has data array with ticket-like objects
+      if (Array.isArray(data.data) && data.data.length > 0) {
+        const firstItem = data.data[0];
+        return this.isTicketObject(firstItem);
+      }
+
+      // Pattern 3: Direct ticket object
+      if (this.isTicketObject(data)) {
+        return true;
+      }
     }
 
-    // Pattern 2: Has data array with ticket-like objects
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      const firstItem = data.data[0];
-      return this.isTicketObject(firstItem);
+    // Pattern 4: Text table format (for get-tickets output)
+    if (typeof data === 'string') {
+      const isTable = this.isTextTable(data);
+      const hasTicketKeywords = this.containsTicketKeywords(data);
+      if (isTable && hasTicketKeywords) {
+        return true;
+      }
     }
 
-    // Pattern 3: Direct ticket object
-    if (this.isTicketObject(data)) {
-      return true;
-    }
-
-    // Pattern 4: Check by tool name
+    // Pattern 5: Check by tool name
     const toolName = this.getToolName(context);
     if (toolName && this.matchesToolPattern(toolName)) {
       return true;
@@ -124,26 +135,225 @@ export class TicketDataFormatter extends BaseFormatter {
   }
 
   /**
+   * Check if text is a table format (contains pipe separators and multiple lines)
+   */
+  private isTextTable(text: string): boolean {
+    if (typeof text !== 'string') {
+      return false;
+    }
+    
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) {
+      return false; // Need at least header and one data row
+    }
+    
+    // Check if first line contains pipe separators (header row)
+    const firstLine = lines[0].trim();
+    if (!firstLine.includes('|')) {
+      return false;
+    }
+    
+    // For get-tickets format, only the header has pipes, data rows don't
+    // But we should still accept it as a table if it has ticket keywords
+    const hasTicketKeywords = this.containsTicketKeywords(text);
+    const hasMultipleLines = lines.length >= 3;
+    
+    return hasTicketKeywords && hasMultipleLines;
+  }
+
+  /**
+   * Check if text contains ticket-related keywords
+   */
+  private containsTicketKeywords(text: string): boolean {
+    if (typeof text !== 'string') {
+      return false;
+    }
+    
+    const ticketKeywords = [
+      'train', 'ticket', 'station', 'departure', 'arrival', 'duration',
+      'seat', 'price', 'yuan', '¥', '￥', 'G', 'D', 'Z', 'T', 'K', // Train types
+      'business', 'first', 'second', 'hard', 'soft', 'sleeper' // Seat types
+    ];
+    
+    const lowerText = text.toLowerCase();
+    return ticketKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
+  }
+
+  /**
    * Extract tickets from data
    */
   private extractTickets(data: any): any[] {
+    // Pattern 1: Structured JSON with tickets array
     if (Array.isArray(data.tickets)) {
       return data.tickets;
     }
     
+    // Pattern 2: Structured JSON with data array
     if (Array.isArray(data.data)) {
       return data.data;
     }
     
+    // Pattern 3: Direct array
     if (Array.isArray(data)) {
       return data;
     }
     
+    // Pattern 4: Single ticket object
     if (this.isTicketObject(data)) {
       return [data];
     }
     
+    // Pattern 5: Text table format (for get-tickets output)
+    if (typeof data === 'string' && this.isTextTable(data)) {
+      return this.parseTextTable(data);
+    }
+    
     return [];
+  }
+
+  /**
+   * Parse text table format into structured ticket objects
+   */
+  private parseTextTable(text: string): any[] {
+    const tickets: any[] = [];
+    const lines = text.trim().split('\n');
+    
+    if (lines.length < 2) {
+      return tickets;
+    }
+    
+    // For get-tickets format, we need to parse the special format
+    // Format: "车次|出发站 -> 到达站|出发时间 -> 到达时间|历时"
+    // Then data lines like: "G9610 广州(telecode:GZQ) -> 长沙南(telecode:CWQ) 00:10 -> 02:31 历时：02:21"
+    
+    // Parse header to understand column structure
+    const headerLine = lines[0].trim();
+    if (!headerLine.includes('|')) {
+      return tickets;
+    }
+    
+    const headerColumns = headerLine.split('|').map(col => col.trim());
+    
+    // Parse data rows (skip header)
+    let currentTicket: any = null;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) {
+        continue;
+      }
+      
+      // Check if this is a new train line (starts with train number like G9610, K6516, etc.)
+      const trainMatch = line.match(/^([GDZKT]\d+|\d+[GDZKT]?)\s+/);
+      if (trainMatch) {
+        // If we have a current ticket, save it
+        if (currentTicket) {
+          tickets.push(currentTicket);
+        }
+        
+        // Start new ticket
+        currentTicket = {};
+        
+        // Parse train info from line
+        // Format: "G9610 广州(telecode:GZQ) -> 长沙南(telecode:CWQ) 00:10 -> 02:31 历时：02:21"
+        const trainParts = line.split(/\s+/);
+        if (trainParts.length >= 1) {
+          currentTicket.trainNo = trainParts[0];
+        }
+        
+        // Try to extract from/to stations
+        // Format: "G9610 广州(telecode:GZQ) -> 长沙南(telecode:CWQ) 00:10 -> 02:31"
+        // We need to skip the train number at the beginning
+        const stationMatch = line.match(/^[A-Z0-9]+\s+(.+?)\s*->\s*(.+?)\s+(\d{2}:\d{2})\s*->\s*(\d{2}:\d{2})/);
+        if (stationMatch) {
+          currentTicket.from = stationMatch[1].trim();
+          currentTicket.to = stationMatch[2].trim();
+          currentTicket.departureTime = stationMatch[3];
+          currentTicket.arrivalTime = stationMatch[4];
+        } else {
+          // Fallback: try to extract stations without train number
+          const fallbackMatch = line.match(/(.+?)\s*->\s*(.+?)\s+(\d{2}:\d{2})\s*->\s*(\d{2}:\d{2})/);
+          if (fallbackMatch) {
+            currentTicket.from = fallbackMatch[1].trim();
+            currentTicket.to = fallbackMatch[2].trim();
+            currentTicket.departureTime = fallbackMatch[3];
+            currentTicket.arrivalTime = fallbackMatch[4];
+          }
+        }
+        
+        // Try to extract duration
+        const durationMatch = line.match(/duration[：:]\s*(\d{2}:\d{2})/i);
+        if (durationMatch) {
+          currentTicket.duration = durationMatch[1];
+        }
+        
+        // Also try Chinese duration pattern (for compatibility)
+        const chineseDurationMatch = line.match(/历时[：:]\s*(\d{2}:\d{2})/);
+        if (chineseDurationMatch && !currentTicket.duration) {
+          currentTicket.duration = chineseDurationMatch[1];
+        }
+        
+        // Initialize seats object
+        currentTicket.seats = {};
+      } 
+      // Check if this is a seat line (starts with dash)
+      else if (line.startsWith('-') && currentTicket) {
+        // Format: "- 商务座: 剩余14张票 1083元"
+        const seatMatch = line.match(/-\s*([^:]+):\s*(.+)/);
+        if (seatMatch) {
+          const seatType = seatMatch[1].trim();
+          const seatInfo = seatMatch[2].trim();
+          currentTicket.seats[seatType] = seatInfo;
+          
+          // Try to extract price from seat info
+          const priceMatch = seatInfo.match(/(\d+(?:\.\d{2})?)元/);
+          if (priceMatch && !currentTicket.price) {
+            currentTicket.price = priceMatch[1];
+          }
+        }
+      }
+    }
+    
+    // Don't forget the last ticket
+    if (currentTicket) {
+      tickets.push(currentTicket);
+    }
+    
+    return tickets;
+  }
+
+  /**
+   * Parse seat information from text
+   */
+  private parseSeatInfo(seatText: string): Record<string, string> {
+    const seatInfo: Record<string, string> = {};
+    
+    if (!seatText || typeof seatText !== 'string') {
+      return seatInfo;
+    }
+    
+    // Split by common separators
+    const seatParts = seatText.split(/[,;]/).map(part => part.trim());
+    
+    for (const part of seatParts) {
+      // Match patterns like "Business Class: 14 tickets left 1083 yuan"
+      const match = part.match(/([^:]+):\s*(.+)/);
+      if (match) {
+        const seatType = match[1].trim();
+        const availability = match[2].trim();
+        seatInfo[seatType] = availability;
+      } else if (part.includes('left') || part.includes('available') || part.includes('sold out') || part.includes('no tickets')) {
+        // Handle simple availability patterns
+        const simpleMatch = part.match(/([^0-9]+)(.+)/);
+        if (simpleMatch) {
+          const seatType = simpleMatch[1].trim();
+          const availability = simpleMatch[2].trim();
+          seatInfo[seatType] = availability;
+        }
+      }
+    }
+    
+    return seatInfo;
   }
 
   /**
@@ -342,7 +552,8 @@ export class TicketDataFormatter extends BaseFormatter {
     const availableSeats: string[] = [];
     
     for (const [seatType, availability] of Object.entries(seats)) {
-      if (availability && availability !== '无' && availability !== '0' && availability !== 'N/A') {
+      if (availability && availability !== 'no' && availability !== '0' && availability !== 'N/A' && 
+          !availability.toLowerCase().includes('sold out') && !availability.toLowerCase().includes('unavailable')) {
         availableSeats.push(`${seatType}: ${availability}`);
       }
     }
