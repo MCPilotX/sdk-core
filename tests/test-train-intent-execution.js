@@ -3,7 +3,7 @@
  * Tests: "查询2026年5月1日广州到长沙的高铁票"
  */
 
-const { getIntentService } = require('./dist/src/intent/intent-service.js');
+const { getIntentService } = require('../packages/core/dist/ai/intent-service.js');
 
 async function testTrainTicketIntent() {
   console.log('Testing train ticket intent execution');
