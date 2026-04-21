@@ -1,25 +1,6 @@
-# Dependencies
-node_modules/
-.pnpm/
-.pnpm-store/
-
-# Build outputs
-dist/
-*.tsbuildinfo
-
-# Turbo cache
-.turbo/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
 # Logs
+logs
 *.log
-logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -33,16 +14,11 @@ pids
 *.pid.lock
 
 # Coverage directory used by tools like istanbul
-coverage/
+coverage
 *.lcov
 
-# nyc test coverage
-.nyc_output
-
-# Compiled binary addons (https://nodejs.org/api/addons.html)
-build/Release
-
 # Dependency directories
+node_modules/
 jspm_packages/
 
 # TypeScript cache
@@ -71,7 +47,10 @@ jspm_packages/
 
 # dotenv environment variables file
 .env
-.env.test
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -93,33 +72,36 @@ dist
 # Storybook build outputs
 .out
 .storybook-out
-storybook-static
 
 # Temporary folders
 tmp/
 temp/
+*.tmp
+*.temp
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# System files
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Test files (if they should be ignored)
-# test-*.js
-# *.test.js
-# *.spec.js
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+
+# Turbo build system
+.turbo
 
 # Local development files
-.local-*
-
-# Package manager lock files (we use pnpm, but keep others for reference)
-package-lock.json
-yarn.lock
-
-bin
+*.local

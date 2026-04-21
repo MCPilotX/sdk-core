@@ -1,0 +1,83 @@
+{
+  "name": "@intentorch/web",
+  "version": "0.8.0",
+  "description": "Web dashboard for IntentOrch - MCP Ecosystem Orchestration Platform",
+  "type": "module",
+  "main": "dist/index.html",
+  "files": [
+    "dist",
+    "public",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "preview": "vite preview",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.10",
+    "@heroicons/react": "^2.2.0",
+    "@intentorch/core": "workspace:*",
+    "@tanstack/react-query": "^5.99.0",
+    "@tanstack/react-query-devtools": "^5.99.0",
+    "axios": "^1.15.0",
+    "json-beautiful-render": "^2.1.7",
+    "lucide-react": "^1.8.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.14.1",
+    "reactflow": "^11.11.4",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "jsdom": "^29.0.2",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.0",
+    "vite": "^8.0.4",
+    "vitest": "^4.1.4"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "orchestration",
+    "ai",
+    "web",
+    "dashboard",
+    "react",
+    "vite"
+  ],
+  "author": "MCPilotX",
+  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcpilotx/intentorch.git",
+    "directory": "packages/web"
+  },
+  "bugs": {
+    "url": "https://github.com/mcpilotx/intentorch/issues"
+  },
+  "homepage": "https://github.com/mcpilotx/intentorch#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

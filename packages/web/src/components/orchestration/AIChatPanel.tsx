@@ -1,0 +1,140 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, User, Bot, Sparkles, Loader2 } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
+import MessageContentRenderer from '../common/MessageContentRenderer';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface AIChatPanelProps {
+  onSendMessage: (content: string) => void;
+  messages: Message[];
+  isAnalyzing: boolean;
+}
+
+const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAnalyzing }) => {
+  const { t } = useLanguage();
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isAnalyzing]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isAnalyzing) return;
+    
+    onSendMessage(input);
+    setInput('');
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-primary-50 dark:bg-primary-900/10">
+        <div className="flex items-center space-x-2">
+          <div className="p-1.5 bg-primary-500 rounded-lg shadow-sm">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-900 dark:text-white">{t('orchestration.aiAssistant')}</h2>
+            <div className="flex items-center space-x-1.5">
+              <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{t('orchestration.subtitle')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 && (
+          <div className="text-center py-10 opacity-50">
+            <Sparkles className="w-12 h-12 mx-auto mb-3 text-primary-300" />
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('orchestration.chatPlaceholder')}
+            </p>
+          </div>
+        )}
+
+        {messages.map((message) => (
+          <div 
+            key={message.id}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div className={`flex max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-2`}>
+              <div className={`p-2 rounded-lg flex-shrink-0 ${
+                message.role === 'user' 
+                  ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400' 
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+              }`}>
+                {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+              </div>
+              <div className={`p-3 rounded-2xl text-sm ${
+                message.role === 'user'
+                  ? 'bg-primary-500 text-white rounded-tr-none'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none'
+              }`}>
+                <MessageContentRenderer content={message.content} role={message.role} />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {isAnalyzing && (
+          <div className="flex justify-start">
+            <div className="flex items-start gap-2">
+              <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                <Bot className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div className="p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 rounded-tl-none flex items-center space-x-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary-500" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">{t('orchestration.analyzing')}</span>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+        <form onSubmit={handleSubmit} className="relative">
+          <textarea
+            className="w-full pl-4 pr-12 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none text-sm min-h-[50px] max-h-32"
+            placeholder="Type your intent..."
+            rows={1}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isAnalyzing}
+            className="absolute right-2 bottom-2 p-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+        <p className="mt-2 text-[10px] text-center text-gray-400">
+          Powered by Intentorch Reasoning Engine
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default AIChatPanel;
