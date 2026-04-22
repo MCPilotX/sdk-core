@@ -41,7 +41,6 @@ export default function Servers() {
   const [pullUrl, setPullUrl] = useState('');
   const [selectedSource, setSelectedSource] = useState<string>('github');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showExamples, setShowExamples] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{
     name: string;
     description?: string;
@@ -304,10 +303,7 @@ export default function Servers() {
               <button
                 key={source.id}
                 type="button"
-                onClick={() => {
-                  setSelectedSource(source.id);
-                  setShowExamples(true);
-                }}
+                onClick={() => setSelectedSource(source.id)}
                 className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                   selectedSource === source.id
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
@@ -446,58 +442,24 @@ export default function Servers() {
             )}
           </div>
 
-          {/* Server input with examples */}
+          {/* Simplified server input */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
-                {t('servers.serverIdentifier')}
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowExamples(!showExamples)}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                {showExamples ? t('servers.hideExamples') : t('servers.showExamples')}
-              </button>
-            </div>
-            
-            {showExamples && (
-              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-medium text-blue-800 mb-2">
-                  {t('servers.examplesFor', { source: REGISTRY_SOURCES.find(s => s.id === selectedSource)?.name })}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {REGISTRY_EXAMPLES[selectedSource]?.map((example, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => setPullUrl(example)}
-                      className="px-3 py-1 text-sm bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50"
-                    >
-                      {example}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('servers.pullDescription')}
+            </label>
             <div className="flex space-x-2">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={pullUrl}
-                  onChange={(e) => setPullUrl(e.target.value)}
-                  placeholder={t('servers.enterIdentifier', { source: REGISTRY_SOURCES.find(s => s.id === selectedSource)?.name })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {selectedSource !== 'direct' && (
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                      {selectedSource}:
-                    </span>
-                  </div>
-                )}
-              </div>
+              <input
+                type="text"
+                value={pullUrl}
+                onChange={(e) => setPullUrl(e.target.value)}
+                placeholder={t('servers.pullPlaceholder')}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePullServer();
+                  }
+                }}
+              />
               <button
                 onClick={handlePullServer}
                 disabled={loading || !pullUrl.trim()}

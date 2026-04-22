@@ -325,43 +325,59 @@ export class DaemonServer {
         if (!wf) return this.sendJson(res, 404, { error: 'Not Found' });
         const results = [];
         
-        // Get all running servers
-        const runningServers = await getProcessManager().list();
+        // Map to keep track of clients for reuse within this workflow execution
+        const clients = new Map();
         
-        for (const s of (wf.steps || [])) {
-            const sid = s.serverId || s.serverName;
-            if (!sid) continue;
-            try {
-                // First, try to find the manifest from running servers
-                let manifest = null;
-                
-                // Look for a running server that matches the serverId
-                for (const server of runningServers) {
-                    if (server.manifest && server.manifest.name === sid) {
-                        manifest = server.manifest;
-                        break;
+        try {
+            // Get all running servers
+            const runningServers = await getProcessManager().list();
+            
+            for (const s of (wf.steps || [])) {
+                const sid = s.serverId || s.serverName;
+                if (!sid) continue;
+                try {
+                    // Check if we already have a client for this server
+                    let client = clients.get(sid);
+                    
+                    if (!client) {
+                        // First, try to find the manifest from running servers
+                        let manifest = null;
+                        
+                        // Look for a running server that matches the serverId
+                        for (const server of runningServers) {
+                            if (server.manifest && server.manifest.name === sid) {
+                                manifest = server.manifest;
+                                break;
+                            }
+                        }
+                        
+                        // If not found in running servers, try to fetch from registry
+                        if (!manifest) {
+                            manifest = await getRegistryClient().fetchManifest(sid);
+                        }
+                        
+                        client = new MCPClient({
+                            transport: {
+                                type: 'stdio',
+                                command: manifest.runtime.command,
+                                args: manifest.runtime.args || [],
+                                env: { ...process.env } as Record<string, string>
+                            }
+                        });
+                        await client.connect();
+                        clients.set(sid, client);
                     }
+                    
+                    const out = await client.callTool(s.toolName, s.parameters || { /* Intentionally empty */ });
+                    results.push({ toolName: s.toolName, status: 'success', output: out, serverName: sid });
+                } catch (e) {
+                    results.push({ toolName: s.toolName, status: 'error', error: (e as Error).message, serverName: sid });
                 }
-                
-                // If not found in running servers, try to fetch from registry
-                if (!manifest) {
-                    manifest = await getRegistryClient().fetchManifest(sid);
-                }
-                
-                const client = new MCPClient({
-                    transport: {
-                        type: 'stdio',
-                        command: manifest.runtime.command,
-                        args: manifest.runtime.args || [],
-                        env: { ...process.env } as Record<string, string>
-                    }
-                });
-                await client.connect();
-                const out = await client.callTool(s.toolName, s.parameters || { /* Intentionally empty */ });
-                results.push({ toolName: s.toolName, status: 'success', output: out });
-                await client.disconnect();
-            } catch (e) {
-                results.push({ toolName: s.toolName, status: 'error', error: (e as Error).message });
+            }
+        } finally {
+            // Disconnect all clients after workflow completion
+            for (const client of clients.values()) {
+                try { await client.disconnect(); } catch (e) { console.error('Error disconnecting client:', e); }
             }
         }
         return this.sendJson(res, 200, { success: true, results, totalSteps: results.length });

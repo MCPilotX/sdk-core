@@ -48,25 +48,25 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
   const actionOptions = [
     { 
       value: 'execute' as const, 
-      label: 'Execute Now', 
+      label: t('orchestration.executeNow'), 
       icon: Play, 
-      description: 'Save and execute immediately', 
+      description: t('orchestration.executeNowDesc'), 
       color: 'from-primary-500 to-primary-600',
       iconColor: 'text-primary-600'
     },
     { 
       value: 'save' as const, 
-      label: 'Save Only', 
+      label: t('orchestration.saveOnly'), 
       icon: Save, 
-      description: 'Save for later execution', 
+      description: t('orchestration.saveOnlyDesc'), 
       color: 'from-green-500 to-green-600',
       iconColor: 'text-green-600'
     },
     { 
       value: 'edit' as const, 
-      label: 'Edit Steps', 
+      label: t('orchestration.editSteps'), 
       icon: Edit, 
-      description: 'Review and modify steps', 
+      description: t('orchestration.editStepsDesc'), 
       color: 'from-blue-500 to-blue-600',
       iconColor: 'text-blue-600'
     }
@@ -94,7 +94,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
         <div>
           <h2 className="font-bold text-gray-900 dark:text-white">{t('orchestration.title')}</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {steps.length} {steps.length === 1 ? 'step' : 'steps'} generated
+            {t('orchestration.stepsGenerated', { count: steps.length })}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -102,7 +102,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
             onClick={onClear}
             disabled={steps.length === 0}
             className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Clear all steps"
+            title={t('orchestration.clearAllSteps')}
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -118,7 +118,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
                     onClick={() => setShowActionDropdown(!showActionDropdown)}
                     disabled={steps.length === 0}
                     className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-l-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-w-[160px] justify-between flex-shrink-0"
-                    title="Select action"
+                    title={t('orchestration.selectAction')}
                   >
                     <div className="flex items-center space-x-2 truncate">
                       <selectedAction.icon className={`w-4 h-4 ${selectedAction.iconColor} flex-shrink-0`} />
@@ -136,12 +136,12 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
                     {isExecuting ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white flex-shrink-0"></div>
-                        <span className="font-medium text-white flex-shrink-0">Executing...</span>
+                        <span className="font-medium text-white flex-shrink-0">{t('orchestration.executing')}</span>
                       </>
                     ) : (
                       <>
                         <Play className="w-4 h-4 text-white flex-shrink-0" />
-                        <span className="font-medium text-white flex-shrink-0">Go</span>
+                        <span className="font-medium text-white flex-shrink-0">{t('orchestration.go')}</span>
                       </>
                     )}
                   </button>
@@ -159,7 +159,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
                     <div className="p-3 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex items-center space-x-2">
                         <Info className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Choose Action</span>
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('orchestration.chooseAction')}</span>
                       </div>
                     </div>
                     
@@ -186,7 +186,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
                     
                     <div className="p-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        <span className="font-medium">Tip:</span> The selected action will be remembered for next time
+                        {t('orchestration.actionTip')}
                       </div>
                     </div>
                   </div>
@@ -219,7 +219,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
                 className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center space-x-2 text-gray-500 hover:text-primary-500 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all group"
               >
                 <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="font-medium">Add step manually</span>
+                <span className="font-medium">{t('orchestration.addStepManually')}</span>
               </button>
             </div>
           </div>
@@ -247,7 +247,7 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
                 </a>
                 <button className="flex items-center justify-center space-x-3 w-full py-3 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <CheckCircle className="w-5 h-5" />
-                  <span>Contact Support</span>
+                  <span>{t('orchestration.contactSupport')}</span>
                 </button>
               </div>
             </div>
@@ -267,14 +267,14 @@ const StepPreviewBoard: React.FC<StepPreviewBoardProps> = ({
         {status === 'error' && (
           <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-900/50">
             <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-            <p className="text-sm">Failed to generate workflow. Please try rephrasing your intent.</p>
+            <p className="text-sm">{t('orchestration.failedToGenerate')}</p>
           </div>
         )}
       </div>
 
       {/* Footer Info */}
       <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-center text-[10px] text-gray-400 uppercase tracking-widest">
-        Draft Mode • Autosaved locally
+        {t('orchestration.draftMode')}
       </div>
     </div>
   );

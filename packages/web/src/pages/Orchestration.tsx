@@ -8,6 +8,7 @@ import { apiService } from '../services/api';
 import { workflowEngine } from '../services/workflowEngine';
 import { formatMCPServerName } from '../utils/format';
 import { useOutputFormatting } from '../hooks/useOutputFormatting';
+import { useLanguage } from '../contexts/LanguageContext';
 import type { WorkflowStep, Workflow } from '../types';
 
 interface Message {
@@ -19,10 +20,12 @@ interface Message {
 
 const Orchestration: React.FC = () => {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [draftSteps, setDraftSteps] = useState<WorkflowStep[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState<string>('');
   const [status, setStatus] = useState<'idle' | 'success' | 'capability_missing' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'idle' | 'executing' | 'success' | 'error'>('idle');
   const [actionSelection, setActionSelection] = useState<'execute' | 'save' | 'edit'>('execute');
@@ -75,8 +78,11 @@ const Orchestration: React.FC = () => {
         // Add execution result to chat messages
         console.log('📊 Execution result data:', result.executionResult);
         if (result.executionResult) {
+          const userQuery = messages.find(m => m.role === 'user')?.content;
+          console.log('🔍 Attempting to format with user query:', userQuery);
+          
           const formattedResult = formatExecutionResult(result.executionResult);
-          console.log('📝 Formatted execution result:', formattedResult);
+          console.log('📝 Formatted result (first 100 chars):', formattedResult.substring(0, 100));
           
           const executionMessage: Message = {
             id: `execution-${Date.now()}`,
@@ -84,10 +90,7 @@ const Orchestration: React.FC = () => {
             content: formattedResult,
             timestamp: new Date().toISOString()
           };
-          console.log('💬 Adding execution message to chat:', executionMessage);
           setMessages(prev => [...prev, executionMessage]);
-        } else {
-          console.warn('⚠️ No executionResult in result:', result);
         }
       } else {
         setExecutionStatus('error');
@@ -113,17 +116,20 @@ const Orchestration: React.FC = () => {
     
     // Start analysis
     setIsAnalyzing(true);
+    setAnalysisStatus(t('orchestration.analyzing'));
     setStatus('idle');
     
     try {
       const result = await aiService.parseIntent(content);
       
+      setAnalysisStatus(t('orchestration.generatingWorkflow'));
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: result.status === 'success' 
-          ? `I've generated a workflow with ${result.steps.length} steps for you. Review the steps on the right and choose an action.`
-          : "I'm sorry, I couldn't find the necessary tools to satisfy your request. I've highlighted the missing capabilities.",
+          ? t('orchestration.workflowGenerated', { count: result.steps.length })
+          : t('orchestration.capabilityMissingDesc'),
         timestamp: new Date().toISOString()
       };
       
@@ -280,7 +286,7 @@ const Orchestration: React.FC = () => {
 
   // Format execution result for display in chat
   const formatExecutionResult = (executionResult: any): string => {
-    if (!executionResult) return 'Workflow execution completed.';
+    if (!executionResult) return t('orchestration.executionComplete');
     
     // Extract user query from messages
     const userQuery = messages.find(m => m.role === 'user')?.content;
@@ -290,445 +296,8 @@ const Orchestration: React.FC = () => {
       return formatWithNewSystem(executionResult, userQuery);
     } catch (error) {
       console.error('Failed to format execution result with new system:', error);
-      
-      // Fallback to simple formatting
-      const { workflowName, name, totalSteps, successfulSteps, failedSteps, results } = executionResult;
-      const displayName = workflowName || name || 'Workflow';
-      
-      let formatted = `**${displayName} Execution Complete**\n\n`;
-      
-      if (totalSteps !== undefined) {
-        formatted += `Steps: ${successfulSteps || 0}/${totalSteps} successful`;
-        if (failedSteps) {
-          formatted += `, ${failedSteps} failed`;
-        }
-        formatted += '\n\n';
-      }
-      
-      if (results && Array.isArray(results)) {
-        formatted += `**Step Results:**\n\n`;
-        
-        results.forEach((result: any, index: number) => {
-          const stepName = result.toolName || result.stepId || `Step ${index + 1}`;
-          const serverName = formatMCPServerName(result.serverName || 'Unknown Server');
-          const status = result.status || 'unknown';
-          
-          formatted += `${index + 1}. **${stepName}** (${serverName}) - ${status}\n`;
-          
-          if (result.message) {
-            formatted += `   ${result.message}\n`;
-          }
-        });
-      }
-      
-      return formatted;
+      return t('orchestration.formattingFailed');
     }
-  };
-
-  // Format step results in a generic, extensible way
-  const formatStepResults = (results: any[], showOutputForSuccessOnly: boolean = true): string => {
-    let formatted = `📋 **Step Results:**\n\n`;
-    
-    results.forEach((result: any, index: number) => {
-      const stepName = result.toolName || result.stepId || `Step ${index + 1}`;
-      const serverName = formatMCPServerName(result.serverName || 'Unknown Server');
-      const status = result.status || 'unknown';
-      
-      formatted += `${index + 1}. **${stepName}** (${serverName})\n`;
-      formatted += `   ${getStatusEmoji(status)} ${formatStatusText(status)}\n`;
-      
-      if (result.message) {
-        formatted += `   💡 ${result.message}\n`;
-      }
-      
-      // Show output for successful steps or all steps based on parameter
-      if (result.output && (!showOutputForSuccessOnly || status === 'success')) {
-        formatted += formatStepOutput(result.output);
-      }
-      
-      if (result.timestamp) {
-        const time = new Date(result.timestamp).toLocaleTimeString();
-        formatted += `   ⏰ ${time}\n`;
-      }
-      
-      formatted += '\n';
-    });
-    
-    return formatted;
-  };
-
-  // Get emoji for step status
-  const getStatusEmoji = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'success':
-        return '✅';
-      case 'failed':
-        return '❌';
-      case 'skipped':
-        return '⏭️';
-      case 'running':
-        return '🔄';
-      default:
-        return '❓';
-    }
-  };
-
-  // Format status text
-  const formatStatusText = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'success':
-        return 'Success';
-      case 'failed':
-        return 'Failed';
-      case 'skipped':
-        return 'Skipped';
-      case 'running':
-        return 'Running';
-      default:
-        return 'Unknown';
-    }
-  };
-
-  // Format step output in a generic and extensible way
-  const formatStepOutput = (output: any): string => {
-    let formatted = '';
-    
-    if (typeof output === 'string') {
-      // Try to detect and format specific types of output
-      const formattedResult = detectAndFormatOutput(output);
-      if (formattedResult) {
-        formatted += formattedResult;
-      } else {
-        // Generic text formatting
-        formatted += formatGenericTextOutput(output);
-      }
-    } else if (typeof output === 'object' && output !== null) {
-      // Special handling for ticket data
-      if (isTicketData(output)) {
-        return formatTicketData(output);
-      }
-      // Try to format object as readable text
-      formatted += formatObjectOutput(output);
-    } else if (output !== null && output !== undefined) {
-      formatted += `   📝 ${String(output)}\n`;
-    }
-    
-    return formatted;
-  };
-  
-  // Check if data is ticket data
-  const isTicketData = (data: any): boolean => {
-    if (!data || typeof data !== 'object') return false;
-    
-    // Check for common ticket data patterns
-    const hasTickets = Array.isArray(data.tickets) || Array.isArray(data.data);
-    const hasTrainInfo = data.tickets?.some((ticket: any) => 
-      ticket.trainNo || ticket.trainNumber || ticket.from || ticket.to
-    );
-    
-    return hasTickets || hasTrainInfo;
-  };
-  
-  // Format ticket data in a user-friendly way
-  const formatTicketData = (data: any): string => {
-    let formatted = '';
-    
-    // Extract tickets array
-    const tickets = data.tickets || data.data || [];
-    
-    if (tickets.length === 0) {
-      formatted += `   🎫 **车票查询结果**\n`;
-      formatted += `   • 未找到符合条件的车票\n`;
-      return formatted;
-    }
-    
-    formatted += `   🎫 **车票查询结果** (共 ${tickets.length} 个车次)\n\n`;
-    
-    // Format each ticket
-    tickets.forEach((ticket: any, index: number) => {
-      const trainNo = ticket.trainNo || ticket.trainNumber || ticket.train_code || '未知车次';
-      const from = ticket.from || ticket.departure_station || '未知出发站';
-      const to = ticket.to || ticket.arrival_station || '未知到达站';
-      const departureTime = ticket.departureTime || ticket.start_time || '未知时间';
-      const arrivalTime = ticket.arrivalTime || ticket.end_time || '未知时间';
-      const duration = ticket.duration || ticket.run_time || '未知时长';
-      const seats = ticket.seats || ticket.seat_info || {};
-      
-      formatted += `   ${index + 1}. **${trainNo}** ${from} → ${to}\n`;
-      formatted += `      🕐 ${departureTime} - ${arrivalTime} (${duration})\n`;
-      
-      // Format seat availability
-      if (Object.keys(seats).length > 0) {
-        formatted += `      💺 余票: `;
-        const seatTypes = [];
-        for (const [seatType, availability] of Object.entries(seats)) {
-          if (availability && availability !== '无' && availability !== '0') {
-            seatTypes.push(`${seatType}: ${availability}`);
-          }
-        }
-        if (seatTypes.length > 0) {
-          formatted += seatTypes.join(', ');
-        } else {
-          formatted += '暂无余票';
-        }
-        formatted += '\n';
-      }
-      
-      // Add price if available
-      if (ticket.price) {
-        formatted += `      💰 票价: ${ticket.price}元\n`;
-      }
-      
-      formatted += '\n';
-    });
-    
-    return formatted;
-  };
-
-  // Detect and format specific types of output
-  const detectAndFormatOutput = (output: string): string | null => {
-    // Check for table-like data (通用表格检测)
-    if (output.includes('|') && output.split('\n').length > 3) {
-      const lines = output.split('\n');
-      const hasTableHeader = lines[0].includes('|');
-      const hasTableRows = lines.slice(1).some(line => line.includes('|') && line.trim().length > 0);
-      
-      if (hasTableHeader && hasTableRows) {
-        return formatTableOutput(output);
-      }
-    }
-    
-    // Check for JSON-like output
-    if ((output.trim().startsWith('{') && output.trim().endsWith('}')) ||
-        (output.trim().startsWith('[') && output.trim().endsWith(']'))) {
-      try {
-        const parsed = JSON.parse(output);
-        return formatObjectOutput(parsed);
-      } catch {
-        // Not valid JSON, continue with other detection
-      }
-    }
-    
-    // Check for error messages
-    if (output.toLowerCase().includes('error') || 
-        output.toLowerCase().includes('failed') ||
-        output.toLowerCase().includes('exception')) {
-      return formatErrorOutput(output);
-    }
-    
-    // Check for success/confirmation messages
-    if (output.toLowerCase().includes('success') || 
-        output.toLowerCase().includes('completed') ||
-        output.toLowerCase().includes('created')) {
-      return formatSuccessOutput(output);
-    }
-    
-    return null;
-  };
-
-  // Format generic text output
-  const formatGenericTextOutput = (output: string): string => {
-    let formatted = '';
-    const maxLength = 300;
-    
-    if (output.length > maxLength) {
-      formatted += `   📝 ${output.substring(0, maxLength)}...\n`;
-      formatted += `   📊 **内容摘要:** ${extractSummary(output)}\n`;
-    } else {
-      formatted += `   📝 ${output}\n`;
-    }
-    
-    return formatted;
-  };
-
-  // Format object output - generic object formatting
-  const formatObjectOutput = (obj: any): string => {
-    let formatted = '';
-    
-    try {
-      // Generic pattern: Extract string content from common properties
-      const stringProperties = ['result', 'output', 'data', 'content', 'message', 'text'];
-      let stringContent = '';
-      
-      for (const prop of stringProperties) {
-        if (obj[prop] && typeof obj[prop] === 'string') {
-          stringContent = obj[prop];
-          break;
-        }
-      }
-      
-      // If we found string content, try to format it
-      if (stringContent) {
-        // Check if it's table-like data
-        if (stringContent.includes('|') && stringContent.split('\n').length > 3) {
-          const lines = stringContent.split('\n');
-          const hasTableHeader = lines[0].includes('|');
-          const hasTableRows = lines.slice(1).some(line => line.includes('|') && line.trim().length > 0);
-          
-          if (hasTableHeader && hasTableRows) {
-            return formatTableOutput(stringContent);
-          }
-        }
-        
-        // Check if it's JSON-like
-        if ((stringContent.trim().startsWith('{') && stringContent.trim().endsWith('}')) ||
-            (stringContent.trim().startsWith('[') && stringContent.trim().endsWith(']'))) {
-          try {
-            const parsed = JSON.parse(stringContent);
-            return formatObjectOutput(parsed);
-          } catch {
-            // Not valid JSON, continue
-          }
-        }
-        
-        // Otherwise, show as generic text
-        return formatGenericTextOutput(stringContent);
-      }
-      
-      // Pattern 3: Regular object - use JSON renderer
-      const jsonStr = JSON.stringify(obj, null, 2);
-      if (jsonStr.length > 500) {
-        // For large objects, show a summary with JSON renderer marker
-        formatted += `   📊 **结构化数据** (${Object.keys(obj).length} 个属性)\n`;
-        formatted += `   • 类型: ${Array.isArray(obj) ? `数组 (${obj.length} 项)` : '对象'}\n`;
-        
-        // Show first few keys/items
-        if (Array.isArray(obj)) {
-          const sampleItems = obj.slice(0, 3);
-          formatted += `   • 示例项: ${sampleItems.map(item => 
-            typeof item === 'object' ? '{...}' : String(item)
-          ).join(', ')}${obj.length > 3 ? '...' : ''}\n`;
-        } else {
-          const sampleKeys = Object.keys(obj).slice(0, 5);
-          formatted += `   • 主要属性: ${sampleKeys.join(', ')}${Object.keys(obj).length > 5 ? '...' : ''}\n`;
-        }
-        
-        // Add JSON renderer marker
-        formatted += `   • **完整数据:**\n`;
-        formatted += `   <!-- JSON_RENDERER_START:${btoa(JSON.stringify(obj))} -->\n`;
-        formatted += `   <!-- JSON_RENDERER_END -->\n`;
-      } else {
-        // For small objects, use JSON renderer directly
-        formatted += `   📊 **结构化数据**\n`;
-        formatted += `   <!-- JSON_RENDERER_START:${btoa(JSON.stringify(obj))} -->\n`;
-        formatted += `   <!-- JSON_RENDERER_END -->\n`;
-      }
-    } catch {
-      formatted += `   📊 [结构化数据]\n`;
-    }
-    
-    return formatted;
-  };
-
-
-  // Format table output
-  const formatTableOutput = (output: string): string => {
-    let formatted = '';
-    const lines = output.split('\n').filter(line => line.trim());
-    
-    if (lines.length === 0) return '';
-    
-    // Extract header
-    const header = lines[0];
-    const rows = lines.slice(1);
-    
-    // Count rows and columns
-    const columnCount = (header.match(/\|/g) || []).length + 1;
-    const rowCount = rows.length;
-    
-    formatted += `   📊 **表格数据** (${rowCount} 行 × ${columnCount} 列)\n`;
-    
-    // Show header
-    formatted += `   **表头:** ${header}\n`;
-    
-    // Show first few rows as examples
-    const exampleRows = rows.slice(0, 3);
-    if (exampleRows.length > 0) {
-      formatted += `   **示例行:**\n`;
-      exampleRows.forEach((row, index) => {
-        formatted += `   ${index + 1}. ${row}\n`;
-      });
-    }
-    
-    if (rowCount > 3) {
-      formatted += `   ... 还有 ${rowCount - 3} 行未显示\n`;
-    }
-    
-    return formatted;
-  };
-
-  // Format error output
-  const formatErrorOutput = (output: string): string => {
-    let formatted = '';
-    
-    formatted += `   ❌ **执行遇到问题**\n`;
-    
-    // Extract error message
-    const errorMatch = output.match(/error[:\s]+([^\n]+)/i) || 
-                      output.match(/failed[:\s]+([^\n]+)/i) ||
-                      output.match(/exception[:\s]+([^\n]+)/i);
-    
-    if (errorMatch && errorMatch[1]) {
-      formatted += `   • 问题: ${errorMatch[1].trim()}\n`;
-    } else {
-      // Show first line as summary
-      const firstLine = output.split('\n')[0].trim();
-      if (firstLine) {
-        formatted += `   • 问题: ${firstLine}\n`;
-      }
-    }
-    
-    // Add troubleshooting tips
-    formatted += `\n   🔧 **建议:**\n`;
-    formatted += `   • 检查输入参数是否正确\n`;
-    formatted += `   • 确认相关服务是否正常运行\n`;
-    formatted += `   • 查看详细日志获取更多信息\n`;
-    
-    return formatted;
-  };
-
-  // Format success output
-  const formatSuccessOutput = (output: string): string => {
-    let formatted = '';
-    
-    formatted += `   ✅ **操作成功**\n`;
-    
-    // Extract success message
-    const successMatch = output.match(/success[:\s]+([^\n]+)/i) || 
-                        output.match(/completed[:\s]+([^\n]+)/i) ||
-                        output.match(/created[:\s]+([^\n]+)/i);
-    
-    if (successMatch && successMatch[1]) {
-      formatted += `   • 结果: ${successMatch[1].trim()}\n`;
-    } else {
-      // Show first line as summary
-      const firstLine = output.split('\n')[0].trim();
-      if (firstLine) {
-        formatted += `   • 结果: ${firstLine}\n`;
-      }
-    }
-    
-    return formatted;
-  };
-
-  // Extract summary from long text
-  const extractSummary = (text: string): string => {
-    // Remove excessive whitespace
-    const cleanText = text.replace(/\s+/g, ' ').trim();
-    
-    // Take first 100 characters as summary
-    if (cleanText.length <= 100) {
-      return cleanText;
-    }
-    
-    // Try to find a sentence boundary
-    const sentenceEnd = cleanText.substring(0, 150).search(/[.!?。！？]\s/);
-    if (sentenceEnd > 50) {
-      return cleanText.substring(0, sentenceEnd + 1) + '...';
-    }
-    
-    // Fallback to first 100 characters
-    return cleanText.substring(0, 100) + '...';
   };
 
   return (
@@ -739,7 +308,8 @@ const Orchestration: React.FC = () => {
           <AIChatPanel 
             onSendMessage={handleSendMessage} 
             messages={messages} 
-            isAnalyzing={isAnalyzing} 
+            isAnalyzing={isAnalyzing}
+            statusMessage={analysisStatus}
           />
         </div>
         
@@ -766,10 +336,10 @@ const Orchestration: React.FC = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full mb-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Executing Workflow</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Please wait, workflow is being executed...
-              </p>
+               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('orchestration.executingWorkflow')}</h3>
+               <p className="text-gray-600 dark:text-gray-400">
+                 {t('orchestration.pleaseWaitWorkflow')}
+               </p>
             </div>
           </div>
         </div>

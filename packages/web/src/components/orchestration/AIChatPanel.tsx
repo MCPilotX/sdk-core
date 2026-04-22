@@ -13,9 +13,10 @@ interface AIChatPanelProps {
   onSendMessage: (content: string) => void;
   messages: Message[];
   isAnalyzing: boolean;
+  statusMessage?: string;
 }
 
-const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAnalyzing }) => {
+const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAnalyzing, statusMessage }) => {
   const { t } = useLanguage();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -97,7 +98,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAn
               </div>
               <div className="p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 rounded-tl-none flex items-center space-x-2">
                 <Loader2 className="w-4 h-4 animate-spin text-primary-500" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">{t('orchestration.analyzing')}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {statusMessage || t('orchestration.analyzing')}
+                </span>
               </div>
             </div>
           </div>
@@ -130,7 +133,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAn
           </button>
         </form>
         <p className="mt-2 text-[10px] text-center text-gray-400">
-          Powered by Intentorch Reasoning Engine
+          {t('orchestration.poweredBy')}
         </p>
       </div>
     </div>

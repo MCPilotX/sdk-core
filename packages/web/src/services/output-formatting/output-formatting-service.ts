@@ -59,33 +59,31 @@ export class OutputFormattingService {
       this.initialize().catch(console.error);
     }
 
+    // Unwrap data if it's an MCP content object or similar
+    const unwrappedData = this.unwrapData(data);
+    
     // Detect data type
-    const dataType = this.registry.detectDataType(data);
+    const dataType = this.registry.detectDataType(unwrappedData);
     
     // Find best formatter
-    const selection = this.registry.findBestFormatter(data, context);
+    const selection = this.registry.findBestFormatter(unwrappedData, context);
     
     // Check if formatter is valid
     if (!selection.formatter || typeof selection.formatter.format !== 'function') {
       console.error('[OutputFormattingService] Invalid formatter selected:', selection);
-      return this.fallbackResult(data, context);
+      return this.fallbackResult(unwrappedData, context);
     }
     
     // Format the data
     let formattedOutput: string;
-    let visualRendering: VisualRenderingMetadata | undefined;
     
     try {
-      formattedOutput = selection.formatter.format(data, context);
-      
-      // Check if formatter provides visual rendering metadata
-      // This would require formatters to return both text and metadata
-      // For now, we'll handle it in a separate method
+      formattedOutput = selection.formatter.format(unwrappedData, context);
     } catch (formatError) {
       console.error(`[OutputFormattingService] Formatter ${selection.formatter.id} failed:`, formatError);
       
       // Fallback to generic formatting
-      formattedOutput = this.fallbackFormat(data, context);
+      formattedOutput = this.fallbackFormat(unwrappedData, context);
       selection.confidence = 0.1;
       selection.reason = `Formatter failed: ${formatError instanceof Error ? formatError.message : 'Unknown error'}`;
     }
@@ -102,13 +100,13 @@ export class OutputFormattingService {
         formattingTime: endTime - startTime,
         cacheHit: selection.reason?.includes('Cached selection') || false
       },
-      originalData: data,
+      originalData: unwrappedData,
       context
     };
     
     // Add visual rendering metadata for complex JSON data
-    if (dataType === DataType.JSON && this.shouldUseVisualRendering(data, context)) {
-      result.visualRendering = this.createVisualRenderingMetadata(data, context);
+    if (dataType === DataType.JSON && this.shouldUseVisualRendering(unwrappedData, context)) {
+      result.visualRendering = this.createVisualRenderingMetadata(unwrappedData, context);
     }
     
     // Log debug info if enabled
@@ -118,6 +116,45 @@ export class OutputFormattingService {
     }
     
     return result;
+  }
+
+  /**
+   * Unwrap data from common wrappers (MCP content, axios response, etc.)
+   */
+  private unwrapData(data: any): any {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+
+    // 1. MCP content wrapper: { content: [{ type: 'text', text: '...' }] }
+    if (Array.isArray(data.content)) {
+      // Find the first text content
+      const textContent = data.content.find((item: any) => item.type === 'text');
+      if (textContent && typeof textContent.text === 'string') {
+        // If there's only one content item or we prioritize text, return the text
+        if (data.content.length === 1 || textContent.text.length > 50) {
+          return textContent.text;
+        }
+      }
+      
+      // If no text content but has other content, return the first one's data if possible
+      if (data.content.length > 0) {
+        const first = data.content[0];
+        return first.data || first.text || first;
+      }
+    }
+
+    // 2. Axios-style response: { data: ... }
+    if (data.data !== undefined && Object.keys(data).length === 1) {
+      return data.data;
+    }
+
+    // 3. Backend common response: { success: true, data: ... }
+    if (data.success === true && data.data !== undefined) {
+      return data.data;
+    }
+
+    return data;
   }
 
   /**
@@ -137,7 +174,29 @@ export class OutputFormattingService {
     };
     
     // Extract the actual output data from execution result
-    const data = executionResult.output || executionResult.data || executionResult;
+    let data = executionResult.output || executionResult.data;
+    
+    // Handle workflow execution results (array of step results)
+    if (!data && executionResult.results && Array.isArray(executionResult.results)) {
+      // If there's only one result, use its output
+      if (executionResult.results.length === 1) {
+        const firstResult = executionResult.results[0];
+        data = firstResult.output || firstResult.data || firstResult;
+        
+        // Update context with step info
+        context.toolName = firstResult.toolName || context.toolName;
+        context.serverName = firstResult.serverName || context.serverName;
+      } else {
+        // Multiple results - use the whole array or find the most "interesting" one
+        // For now, use the whole results array as data
+        data = executionResult.results;
+      }
+    }
+    
+    // Fallback to the whole object
+    if (!data) {
+      data = executionResult;
+    }
     
     return this.format(data, context);
   }
