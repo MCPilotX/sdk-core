@@ -112,7 +112,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAn
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
         <form onSubmit={handleSubmit} className="relative group">
           <textarea
-            className="w-full pl-4 pr-14 py-3.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 resize-none text-sm min-h-[56px] max-h-48"
+            className="w-full pl-4 pr-14 py-3.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 resize-none text-sm min-h-[42px] max-h-42"
             placeholder={t('orchestration.inputPlaceholder')}
             rows={1}
             value={input}
@@ -127,10 +127,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAn
           <button
             type="submit"
             disabled={!input.trim() || isAnalyzing}
-            className="absolute right-2.5 bottom-2.5 p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 active:scale-95 transition-all disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary-500/20"
+            className="absolute right-2.5 bottom-3.5 p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 active:scale-95 transition-all disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary-500/20"
             title={t('orchestration.sendButton')}
           >
-            <Send className="w-4.5 h-4.5" />
+            <Send className="w-3.5 h-3.5" />
           </button>
         </form>
         <div className="mt-2 flex items-center justify-center space-x-2 opacity-40">

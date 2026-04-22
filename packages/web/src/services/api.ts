@@ -763,7 +763,7 @@ class ApiService {
       // The validation has already been done above
       return {
         success: true,
-        message: `Configuration validation passed for ${config.provider} (${config.model}). Note: This is only format validation. To fully test the API key, please ensure the backend has the /api/ai/test endpoint implemented.`
+        message: `Configuration validated: ${config.provider} (${config.model})`
       };
     }
   }

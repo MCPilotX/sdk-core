@@ -144,11 +144,17 @@ export default function ConfigPage() {
       if (result.success) {
         showToast(t('config.testSuccess'), 'success');
       } else {
-        showToast(t('config.testError') + ': ' + (result.message || t('config.testErrorUnknown')), 'error');
+        // Simplify error message
+        const errorMessage = result.message || t('config.testErrorUnknown');
+        const shortMessage = errorMessage.length > 50 ? errorMessage.substring(0, 50) + '...' : errorMessage;
+        showToast(t('config.testError') + ': ' + shortMessage, 'error');
       }
     } catch (err: any) {
-      setTestResult({ success: false, message: err.message || t('config.testErrorUnknown') });
-      showToast(t('config.testError') + ': ' + (err.message || t('config.testErrorUnknown')), 'error');
+      // Simplify error message
+      const errorMessage = err.message || t('config.testErrorUnknown');
+      const shortMessage = errorMessage.length > 50 ? errorMessage.substring(0, 50) + '...' : errorMessage;
+      setTestResult({ success: false, message: shortMessage });
+      showToast(t('config.testError') + ': ' + shortMessage, 'error');
     } finally {
       setTesting(false);
     }
