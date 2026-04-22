@@ -300,7 +300,7 @@ IntentOrch 兼容所有遵循 [Model Context Protocol](https://modelcontextproto
 
 ## 🤝 贡献指南
 
-我们欢迎所有形式的贡献！。
+我们欢迎所有形式的贡献！
 
 ---
 
