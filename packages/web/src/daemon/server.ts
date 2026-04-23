@@ -13,7 +13,9 @@ import {
   ensureInTorchDir,
   getDaemonPidPath,
   getDaemonLogPath,
-  getLogPath
+  getLogPath,
+  getExecuteService,
+  type UnifiedExecutionOptions
 } from '@intentorch/core';
 import type { DaemonConfig } from '@intentorch/core';
 
@@ -404,6 +406,97 @@ export class DaemonServer {
             return this.sendJson(res, result.success ? 200 : 400, result);
         } catch (error: any) {
             console.error('[Daemon] Error parsing intent:', error);
+            return this.sendJson(res, 500, { 
+                success: false, 
+                error: `Failed to parse intent: ${error.message}` 
+            });
+        }
+    }
+
+    // Unified execution endpoints (using CLI run command capabilities)
+    if ((path === '/api/execute/natural-language' || path === '/api/execute/naturalLanguage') && method === 'POST') {
+        try {
+            const { query, options } = JSON.parse(body);
+            
+            if (!query || typeof query !== 'string') {
+                return this.sendJson(res, 400, { 
+                    success: false, 
+                    error: 'Query is required and must be a string' 
+                });
+            }
+            
+            console.log(`[Daemon] Executing natural language query: "${query.substring(0, 100)}..."`);
+            
+            // Get unified execution service
+            const executionService = getExecuteService();
+            
+            if (!executionService) {
+                console.error('[Daemon] Unified execution service is not available');
+                return this.sendJson(res, 503, { 
+                    success: false, 
+                    error: 'Unified execution service is not available. Please check service configuration.' 
+                });
+            }
+            
+            // Execute with options
+            const executionOptions: UnifiedExecutionOptions = options || {};
+            const result = await executionService.executeNaturalLanguage(query, executionOptions);
+            
+            return this.sendJson(res, result.success ? 200 : 400, result);
+        } catch (error: any) {
+            console.error('[Daemon] Error executing natural language query:', error);
+            console.error('[Daemon] Error stack:', error.stack);
+            return this.sendJson(res, 500, { 
+                success: false, 
+                error: `Failed to execute query: ${error.message}` 
+            });
+        }
+    }
+
+    if ((path === '/api/execute/parse-intent' || path === '/api/execute/parseIntent') && method === 'POST') {
+        try {
+            const { intent, context } = JSON.parse(body);
+            
+            if (!intent || typeof intent !== 'string') {
+                return this.sendJson(res, 400, { 
+                    success: false, 
+                    error: 'Intent is required and must be a string' 
+                });
+            }
+            
+            console.log(`[Daemon] Parsing intent with unified service: "${intent.substring(0, 100)}..."`);
+            
+            // Get unified execution service
+            const executionService = getExecuteService();
+            
+            if (!executionService) {
+                console.error('[Daemon] Unified execution service is not available');
+                return this.sendJson(res, 503, { 
+                    success: false, 
+                    error: 'Unified execution service is not available. Please check service configuration.' 
+                });
+            }
+            
+            console.log('[Daemon] Unified execution service obtained, calling parseIntent...');
+            
+            // Parse intent using unified service (same as CLI run command)
+            const result = await executionService.parseIntent(intent, context);
+            
+            console.log('[Daemon] Unified execution service parseIntent result:', result);
+            
+            return this.sendJson(res, 200, {
+                success: true,
+                data: {
+                    steps: result.steps,
+                    status: result.status,
+                    confidence: result.confidence,
+                    explanation: result.explanation
+                }
+            });
+        } catch (error: any) {
+            console.error('[Daemon] Error parsing intent with unified service:', error);
+            console.error('[Daemon] Error stack:', error.stack);
+            console.error('[Daemon] Error details:', JSON.stringify(error, null, 2));
             return this.sendJson(res, 500, { 
                 success: false, 
                 error: `Failed to parse intent: ${error.message}` 

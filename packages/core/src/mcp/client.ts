@@ -132,22 +132,81 @@ export class MCPClient extends EventEmitter {
       }
     }
 
-    const response = await this.sendRequest(MCP_METHODS.TOOLS_CALL, {
-      name: toolName,
-      arguments: mappedArguments,
-    });
+    // Try with retry mechanism
+    let lastError: Error | null = null;
+    const maxRetries = this.config.maxRetries || 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.sendRequest(MCP_METHODS.TOOLS_CALL, {
+          name: toolName,
+          arguments: mappedArguments,
+        });
 
-    // Ensure response is a valid ToolResult
-    const toolResult = response as ToolResult;
+        // Check if response is undefined or null
+        if (response === undefined || response === null) {
+          console.warn(`[MCPClient] Attempt ${attempt}/${maxRetries}: Tool "${toolName}" execution failed: MCP server returned empty response`);
+          lastError = new Error(`Tool "${toolName}" execution failed: MCP server returned empty response`);
+          if (attempt < maxRetries) {
+            await this.delay(1000 * attempt); // Exponential backoff
+            continue;
+          }
+          throw lastError;
+        }
 
-    // Check if the tool execution failed (isError flag)
-    if (toolResult.isError) {
-      // Create a proper error from the tool result content
-      const errorMessage = toolResult.content?.[0]?.text || 'Tool execution failed';
-      throw new Error(`Tool "${toolName}" execution failed: ${errorMessage}`);
+        // Log the raw response for debugging
+        console.debug(`[MCPClient] Raw response for tool "${toolName}":`, JSON.stringify(response, null, 2));
+
+        // Ensure response is a valid ToolResult
+        const toolResult = response as ToolResult;
+
+        // Check if toolResult is a valid object
+        if (typeof toolResult !== 'object' || toolResult === null) {
+          console.warn(`[MCPClient] Attempt ${attempt}/${maxRetries}: Tool "${toolName}" execution failed: MCP server returned invalid response format:`, response);
+          lastError = new Error(`Tool "${toolName}" execution failed: MCP server returned invalid response format`);
+          if (attempt < maxRetries) {
+            await this.delay(1000 * attempt);
+            continue;
+          }
+          throw lastError;
+        }
+
+        // Check if the tool execution failed (isError flag)
+        if (toolResult.isError) {
+          // Create a proper error from the tool result content
+          const errorMessage = toolResult.content?.[0]?.text || 'Tool execution failed';
+          console.warn(`[MCPClient] Attempt ${attempt}/${maxRetries}: Tool "${toolName}" execution failed with error:`, errorMessage);
+          
+          // Check if this is a retryable error
+          if (this.isRetryableError(errorMessage) && attempt < maxRetries) {
+            lastError = new Error(`Tool "${toolName}" execution failed: ${errorMessage}`);
+            await this.delay(1000 * attempt);
+            continue;
+          }
+          
+          // For non-retryable errors or after max retries, throw with enhanced message
+          let enhancedErrorMessage = errorMessage;
+          if (errorMessage.includes('Cannot read properties of undefined')) {
+            enhancedErrorMessage = `MCP server internal error (${errorMessage}). Please check server implementation or try alternative tools.`;
+          }
+          
+          throw new Error(`Tool "${toolName}" execution failed: ${enhancedErrorMessage}`);
+        }
+
+        console.debug(`[MCPClient] Tool "${toolName}" execution succeeded on attempt ${attempt}`);
+        return toolResult;
+      } catch (error: any) {
+        lastError = error;
+        if (attempt < maxRetries) {
+          console.warn(`[MCPClient] Attempt ${attempt}/${maxRetries} failed for tool "${toolName}":`, error.message);
+          await this.delay(1000 * attempt);
+        }
+      }
     }
 
-    return toolResult;
+    // If we get here, all retries failed
+    console.error(`[MCPClient] Tool "${toolName}" execution failed after ${maxRetries} attempts`);
+    throw lastError || new Error(`Tool "${toolName}" execution failed after ${maxRetries} attempts`);
   }
 
   async refreshTools(): Promise<void> {
@@ -265,6 +324,12 @@ export class MCPClient extends EventEmitter {
     try {
       const response = message as JSONRPCResponse;
 
+      // Check if response is valid
+      if (!response || typeof response !== 'object') {
+        console.error('[MCPClient] Invalid response received:', message);
+        return;
+      }
+
       // Handle request response
       if (response.id && this.pendingRequests.has(response.id)) {
         const { resolve, reject, timeout } = this.pendingRequests.get(response.id)!;
@@ -278,7 +343,13 @@ export class MCPClient extends EventEmitter {
           (error as any).data = response.error.data;
           reject(error);
         } else {
-          resolve(response.result);
+          // Check if result is undefined (should not happen per JSON-RPC spec)
+          if (response.result === undefined) {
+            console.warn('[MCPClient] Response result is undefined, resolving with null');
+            resolve(null);
+          } else {
+            resolve(response.result);
+          }
         }
       }
 
@@ -317,6 +388,39 @@ export class MCPClient extends EventEmitter {
   }
 
   // ==================== Utility Methods ====================
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private isRetryableError(errorMessage: string): boolean {
+    // Define which errors are retryable
+    const retryablePatterns = [
+      /timeout/i,
+      /network/i,
+      /connection/i,
+      /temporarily/i,
+      /busy/i,
+      /rate limit/i,
+      /too many requests/i,
+      /server error/i,
+      /internal error/i
+    ];
+
+    // Check if error matches any retryable pattern
+    for (const pattern of retryablePatterns) {
+      if (pattern.test(errorMessage)) {
+        return true;
+      }
+    }
+
+    // Default to non-retryable for specific server bugs
+    if (errorMessage.includes('Cannot read properties of undefined')) {
+      return false; // Server bug, retrying won't help
+    }
+
+    return false; // Default to non-retryable
+  }
 
   async withRetry<T>(operation: () => Promise<T>): Promise<T> {
     let lastError: Error;

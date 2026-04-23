@@ -3,12 +3,12 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import Orchestration from '../pages/Orchestration';
-import { aiService } from '../services/ai';
+import { aiService } from '../services/ai-service';
 import { apiService } from '../services/api';
 import { LanguageProvider } from '../contexts/LanguageContext';
 
 // Mock services
-vi.mock('../services/ai', () => ({
+vi.mock('../services/ai-service', () => ({
   aiService: {
     parseIntent: vi.fn(),
   },

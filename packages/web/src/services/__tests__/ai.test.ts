@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aiService } from '../ai';
+import { aiService } from '../ai-service';
 
 describe('aiService.parseIntent', () => {
   it('should parse user intent into workflow steps', async () => {

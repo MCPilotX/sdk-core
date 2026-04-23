@@ -1,0 +1,73 @@
+<h2>意图编排页面 UI 改进建议</h2>
+<p class="subtitle">针对您提到的按钮排版和配色不协调问题，我准备了以下方案</p>
+
+<h3>1. 对话框按钮布局优化</h3>
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">方案 A：内部嵌入式 (更现代)</div>
+    <div class="mockup-body">
+      <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
+        <div style="position: relative; background: white; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 48px 12px 16px; min-height: 40px;">
+          <div style="color: #9ca3af; font-size: 14px;">查询2026年5月1日广州到长沙的高铁票...</div>
+          <button style="position: absolute; right: 8px; bottom: 8px; background: #3b82f6; color: white; border: none; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+        <div style="text-align: center; font-size: 10px; color: #9ca3af; margin-top: 8px;">保持按钮在输入框内部，视觉更统一</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">方案 B：右侧独立式 (更直观)</div>
+    <div class="mockup-body">
+      <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
+        <div style="display: flex; gap: 8px; align-items: flex-end;">
+          <div style="flex: 1; background: white; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 16px; color: #9ca3af; font-size: 14px; min-height: 40px;">
+            查询高铁票...
+          </div>
+          <button style="background: #3b82f6; color: white; border: none; border-radius: 12px; height: 46px; padding: 0 16px; font-weight: bold; cursor: pointer;">
+            发送
+          </button>
+        </div>
+        <div style="text-align: center; font-size: 10px; color: #9ca3af; margin-top: 8px;">按钮独立于输入框，适合需要大点击区域的情况</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>2. 系统配色方案方案对比</h3>
+<div class="options">
+  <div class="option" data-choice="modern-blue" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>方案一：极简深蓝 (Modern Blue)</h3>
+      <p>采用更高饱和度的蓝色作为主色，配合浅灰色背景，提升专业感和科技感。</p>
+      <div style="display: flex; gap: 4px; margin-top: 8px;">
+        <div style="width: 20px; height: 20px; background: #2563eb; border-radius: 2px;"></div>
+        <div style="width: 20px; height: 20px; background: #f8fafc; border-radius: 2px; border: 1px solid #e2e8f0;"></div>
+        <div style="width: 20px; height: 20px; background: #1e293b; border-radius: 2px;"></div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="nature-teal" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>方案二：自然青色 (Nature Teal)</h3>
+      <p>采用青绿色系，缓解长时间使用的视觉疲劳，给用户更清新的体验。</p>
+      <div style="display: flex; gap: 4px; margin-top: 8px;">
+        <div style="width: 20px; height: 20px; background: #0d9488; border-radius: 2px;"></div>
+        <div style="width: 20px; height: 20px; background: #f0fdfa; border-radius: 2px; border: 1px solid #ccfbf1;"></div>
+        <div style="width: 20px; height: 20px; background: #134e4a; border-radius: 2px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>您的反馈</h3>
+  <p>请查看浏览器中的预览，并在这里告诉我您的倾向：</p>
+  <ul>
+    <li>按钮布局您更喜欢 <strong>方案 A</strong> 还是 <strong>方案 B</strong>？</li>
+    <li>配色方案您更倾向于 <strong>极简深蓝</strong> 还是 <strong>自然青色</strong>？</li>
+  </ul>
+</div>

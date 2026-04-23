@@ -1,53 +1,57 @@
 /**
- * IntentOrch - MCP 生态的 Docker
+ * IntentOrch - Docker for MCP Ecosystem
  * 
- * 让开发者像管理容器一样管理 MCP Server
+ * Allows developers to manage MCP Servers like containers
  * 
- * 主要功能：
- * 1. MCP Server 生命周期管理
- * 2. 自然语言意图解析和执行
- * 3. 工作流编排和跟踪
- * 4. 运行时适配和检测
+ * Main features:
+ * 1. MCP Server lifecycle management
+ * 2. Natural language intent parsing and execution
+ * 3. Workflow orchestration and tracking
+ * 4. Runtime adaptation and detection
  * 
  * @package @mcpilotx/intentorch
  * @version 0.1.0
  */
 
-// ==================== 核心模块 ====================
+// ==================== Core Modules ====================
 export { ConfigManager } from './core';
 export type { RuntimeType, ServiceConfig, Config, AIConfig, DetectionResult } from './core';
 
-// ==================== AI 模块 ====================
+// ==================== AI Modules ====================
 export { AI, AIConfigManager, CloudIntentEngine } from './ai';
 export type { AskResult, IntentResult, CloudIntentEngineConfig } from './ai';
 
-// ==================== MCP 模块 ====================
+// ==================== Execute Service ====================
+export { ExecuteService, getExecuteService, createExecuteService } from './ai/execute-service';
+export type { UnifiedExecutionOptions, UnifiedExecutionResult, WorkflowExecutionResult } from './ai/execute-service';
+
+// ==================== MCP Modules ====================
 export { MCPClient, ToolRegistry } from './mcp';
 export type { Tool, ToolCall, ToolMetadata } from './mcp';
 
-// ==================== 运行时模块 ====================
+// ==================== Runtime Modules ====================
 export { RuntimeDetector, RuntimeAdapter } from './runtime';
 
-// ==================== 工具注册表 ====================
+// ==================== Tool Registry ====================
 export { ToolRegistry as ToolRegistryModule } from './tool-registry';
 
 // ==================== 进程管理 ====================
 export { ProcessManager, ProcessStore } from './process-manager';
 
-// ==================== 密钥管理 ====================
+// ==================== Secret Management ====================
 export { SecretManager } from './secret';
 
-// ==================== 工作流模块 ====================
+// ==================== Workflow Modules ====================
 export * from './workflow';
 
-// ==================== 工具函数 ====================
+// ==================== Utility Functions ====================
 export * from './utils';
 
-// ==================== 类型定义 ====================
+// ==================== Type Definitions ====================
 export * from './types';
 
-// ==================== CLI 工具 ====================
-// 注意：CLI 模块通常不直接导出，通过 bin/intorch.js 使用
+// ==================== CLI Tools ====================
+// Note: CLI modules are not directly exported, used via bin/intorch.js
 
 /**
  * 获取 IntentOrch 版本信息
@@ -85,8 +89,8 @@ export async function getSystemStatus() {
 export async function initialize(_config?: any) {
   console.log(`[IntentOrch] Initializing version ${getVersion()}`);
   
-  // 这里可以添加初始化逻辑
-  // 例如：加载配置、初始化服务等
+  // Add initialization logic here
+  // For example: load configuration, initialize services, etc.
   
   return {
     success: true,
@@ -95,7 +99,7 @@ export async function initialize(_config?: any) {
   };
 }
 
-// ==================== 工具函数导出 ====================
+// ==================== Utility Function Exports ====================
 export { getProcessManager } from './process-manager/manager';
 export { getRegistryClient } from './registry/client';
 export { getWorkflowManager } from './workflow/manager';
@@ -114,7 +118,7 @@ export { DaemonServer } from './daemon/server';
 export { ensureInTorchDir, getDaemonPidPath, getDaemonLogPath, getLogPath } from './utils/paths';
 export type { DaemonConfig } from './daemon/types';
 
-// ==================== 默认导出 ====================
+// ==================== Default Export ====================
 import { intentorch as adapter } from './ai/intentorch-adapter';
 
 const intentorch = {

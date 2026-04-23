@@ -20,7 +20,7 @@ import type { WorkflowStep } from '../../types';
 
 interface StepPreviewBoardProps {
   steps: WorkflowStep[];
-  status: 'idle' | 'success' | 'capability_missing' | 'error';
+  status: 'idle' | 'success' | 'capability_missing' | 'partial' | 'error';
   onPublish?: () => void;
   onClear: () => void;
   onDeleteStep: (id: string) => void;

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import AIChatPanel from '../components/orchestration/AIChatPanel';
 import StepPreviewBoard from '../components/orchestration/StepPreviewBoard';
 import { Toast } from '../components/ui';
-import { aiService } from '../services/ai';
+import { aiService } from '../services/ai-service'; // Use enhanced AI service
 import { apiService } from '../services/api';
 import { workflowEngine } from '../services/workflowEngine';
 import { formatMCPServerName } from '../utils/format';
@@ -26,7 +26,7 @@ const Orchestration: React.FC = () => {
   const [draftSteps, setDraftSteps] = useState<WorkflowStep[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState<string>('');
-  const [status, setStatus] = useState<'idle' | 'success' | 'capability_missing' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'success' | 'capability_missing' | 'partial' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'idle' | 'executing' | 'success' | 'error'>('idle');
   const [actionSelection, setActionSelection] = useState<'execute' | 'save' | 'edit'>('execute');
   const [autoExecute, setAutoExecute] = useState(true);
