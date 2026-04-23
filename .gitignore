@@ -110,10 +110,14 @@ temp/
 .DS_Store
 Thumbs.db
 
-# Test files (if they should be ignored)
-# test-*.js
-# *.test.js
-# *.spec.js
+# Test files (should be ignored)
+test-*.js
+*.test.js
+*.spec.js
+verify-*.js
+check-*.js
+packages/test-*.js
+tests/**/*.js
 
 # Local development files
 .local-*
