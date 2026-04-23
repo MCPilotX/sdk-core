@@ -321,97 +321,6 @@ export class DaemonServer {
         const id = await getWorkflowManager().save(data);
         return this.sendJson(res, 201, { workflow: { id, ...data } });
     }
-    if (path.includes('/execute') && method === 'POST') {
-        const id = path.replace('/api/workflows/', '').replace('/execute', '');
-        const wf = await getWorkflowManager().load(id);
-        if (!wf) return this.sendJson(res, 404, { error: 'Not Found' });
-        const results = [];
-        
-        // Map to keep track of clients for reuse within this workflow execution
-        const clients = new Map();
-        
-        try {
-            // Get all running servers
-            const runningServers = await getProcessManager().list();
-            
-            for (const s of (wf.steps || [])) {
-                const sid = s.serverId || s.serverName;
-                if (!sid) continue;
-                try {
-                    // Check if we already have a client for this server
-                    let client = clients.get(sid);
-                    
-                    if (!client) {
-                        // First, try to find the manifest from running servers
-                        let manifest = null;
-                        
-                        // Look for a running server that matches the serverId
-                        for (const server of runningServers) {
-                            if (server.manifest && server.manifest.name === sid) {
-                                manifest = server.manifest;
-                                break;
-                            }
-                        }
-                        
-                        // If not found in running servers, try to fetch from registry
-                        if (!manifest) {
-                            manifest = await getRegistryClient().fetchManifest(sid);
-                        }
-                        
-                        client = new MCPClient({
-                            transport: {
-                                type: 'stdio',
-                                command: manifest.runtime.command,
-                                args: manifest.runtime.args || [],
-                                env: { ...process.env } as Record<string, string>
-                            }
-                        });
-                        await client.connect();
-                        clients.set(sid, client);
-                    }
-                    
-                    const out = await client.callTool(s.toolName, s.parameters || { /* Intentionally empty */ });
-                    results.push({ toolName: s.toolName, status: 'success', output: out, serverName: sid });
-                } catch (e) {
-                    results.push({ toolName: s.toolName, status: 'error', error: (e as Error).message, serverName: sid });
-                }
-            }
-        } finally {
-            // Disconnect all clients after workflow completion
-            for (const client of clients.values()) {
-                try { await client.disconnect(); } catch (e) { console.error('Error disconnecting client:', e); }
-            }
-        }
-        return this.sendJson(res, 200, { success: true, results, totalSteps: results.length });
-    }
-
-    if (path === '/api/intent/parse' && method === 'POST') {
-        try {
-            const { intent, context } = JSON.parse(body);
-            
-            if (!intent || typeof intent !== 'string') {
-                return this.sendJson(res, 400, { 
-                    success: false, 
-                    error: 'Intent is required and must be a string' 
-                });
-            }
-            
-            // Get AI configuration from system config
-            const aiConfig = await getAIConfig();
-            
-            // Use universal intent service (LLM-driven, language-agnostic)
-            const intentService = getIntentService(aiConfig);
-            const result = await intentService.parseIntent({ intent, context });
-            
-            return this.sendJson(res, result.success ? 200 : 400, result);
-        } catch (error: any) {
-            console.error('[Daemon] Error parsing intent:', error);
-            return this.sendJson(res, 500, { 
-                success: false, 
-                error: `Failed to parse intent: ${error.message}` 
-            });
-        }
-    }
 
     // Unified execution endpoints (using CLI run command capabilities)
     if ((path === '/api/execute/natural-language' || path === '/api/execute/naturalLanguage') && method === 'POST') {
@@ -497,6 +406,98 @@ export class DaemonServer {
             console.error('[Daemon] Error parsing intent with unified service:', error);
             console.error('[Daemon] Error stack:', error.stack);
             console.error('[Daemon] Error details:', JSON.stringify(error, null, 2));
+            return this.sendJson(res, 500, { 
+                success: false, 
+                error: `Failed to parse intent: ${error.message}` 
+            });
+        }
+    }
+
+    if (path.includes('/execute') && method === 'POST') {
+        const id = path.replace('/api/workflows/', '').replace('/execute', '');
+        const wf = await getWorkflowManager().load(id);
+        if (!wf) return this.sendJson(res, 404, { error: 'Not Found' });
+        const results = [];
+        
+        // Map to keep track of clients for reuse within this workflow execution
+        const clients = new Map();
+        
+        try {
+            // Get all running servers
+            const runningServers = await getProcessManager().list();
+            
+            for (const s of (wf.steps || [])) {
+                const sid = s.serverId || s.serverName;
+                if (!sid) continue;
+                try {
+                    // Check if we already have a client for this server
+                    let client = clients.get(sid);
+                    
+                    if (!client) {
+                        // First, try to find the manifest from running servers
+                        let manifest = null;
+                        
+                        // Look for a running server that matches the serverId
+                        for (const server of runningServers) {
+                            if (server.manifest && server.manifest.name === sid) {
+                                manifest = server.manifest;
+                                break;
+                            }
+                        }
+                        
+                        // If not found in running servers, try to fetch from registry
+                        if (!manifest) {
+                            manifest = await getRegistryClient().fetchManifest(sid);
+                        }
+                        
+                        client = new MCPClient({
+                            transport: {
+                                type: 'stdio',
+                                command: manifest.runtime.command,
+                                args: manifest.runtime.args || [],
+                                env: { ...process.env } as Record<string, string>
+                            }
+                        });
+                        await client.connect();
+                        clients.set(sid, client);
+                    }
+                    
+                    const out = await client.callTool(s.toolName, s.parameters || { /* Intentionally empty */ });
+                    results.push({ toolName: s.toolName, status: 'success', output: out, serverName: sid });
+                } catch (e) {
+                    results.push({ toolName: s.toolName, status: 'error', error: (e as Error).message, serverName: sid });
+                }
+            }
+        } finally {
+            // Disconnect all clients after workflow completion
+            for (const client of clients.values()) {
+                try { await client.disconnect(); } catch (e) { console.error('Error disconnecting client:', e); }
+            }
+        }
+        return this.sendJson(res, 200, { success: true, results, totalSteps: results.length });
+    }
+
+    if (path === '/api/intent/parse' && method === 'POST') {
+        try {
+            const { intent, context } = JSON.parse(body);
+            
+            if (!intent || typeof intent !== 'string') {
+                return this.sendJson(res, 400, { 
+                    success: false, 
+                    error: 'Intent is required and must be a string' 
+                });
+            }
+            
+            // Get AI configuration from system config
+            const aiConfig = await getAIConfig();
+            
+            // Use universal intent service (LLM-driven, language-agnostic)
+            const intentService = getIntentService(aiConfig);
+            const result = await intentService.parseIntent({ intent, context });
+            
+            return this.sendJson(res, result.success ? 200 : 400, result);
+        } catch (error: any) {
+            console.error('[Daemon] Error parsing intent:', error);
             return this.sendJson(res, 500, { 
                 success: false, 
                 error: `Failed to parse intent: ${error.message}` 
