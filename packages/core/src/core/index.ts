@@ -4,7 +4,6 @@
  */
 
 // Export configuration management
-export { ConfigManager } from './config-manager';
 export { ConfigService, getConfigService } from './config-service';
 
 // Export types
@@ -47,14 +46,9 @@ export {
   shouldRetry,
 } from './error-handler';
 
-// Export AI error handling
-export { AIError } from './error-ai';
-
 // Export logger
 export { logger } from './logger';
 
 // Export performance monitor
 export { PerformanceMonitor } from './performance-monitor';
 
-// Export retry manager
-export { RetryManager } from './retry-manager';

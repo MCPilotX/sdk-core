@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
-  Home, 
+  Home,
   Server, 
-  PlayCircle, 
-  Settings, 
-  Key, 
+  PlayCircle,
+  Settings,
+  Key,
   Workflow,
   FileText,
   Menu,

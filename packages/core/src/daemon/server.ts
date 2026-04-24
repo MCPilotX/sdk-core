@@ -868,6 +868,62 @@ export class DaemonServer {
         }
     }
 
+    // AI test endpoint
+    if (path === '/api/ai/test' && method === 'POST') {
+        try {
+            const { provider, model, apiKey } = JSON.parse(body);
+            
+            if (!provider || !model || !apiKey) {
+                return this.sendJson(res, 400, { 
+                    success: false, 
+                    error: 'provider, model, and apiKey are required' 
+                });
+            }
+            
+            console.log(`[Daemon] Testing AI config: provider=${provider}, model=${model}`);
+            
+            // Import and use the AI service to perform a real connection test
+            try {
+                const { AI } = await import('../ai/ai');
+                const ai = new AI();
+                
+                // Configure the AI service with the provided credentials
+                await ai.configure({
+                    provider: provider as any,
+                    apiKey: apiKey,
+                    model: model,
+                });
+                
+                // Perform actual connection test (makes real HTTP request to the provider's API)
+                const testResult = await ai.testConnection();
+                
+                if (testResult.success) {
+                    return this.sendJson(res, 200, { 
+                        success: true, 
+                        message: `Successfully connected to ${provider} using model ${model}: ${testResult.message}` 
+                    });
+                } else {
+                    return this.sendJson(res, 200, { 
+                        success: false, 
+                        message: `Connection test failed for ${provider}: ${testResult.message}` 
+                    });
+                }
+            } catch (serviceError: any) {
+                console.warn('[Daemon] AI service test failed:', serviceError.message);
+                return this.sendJson(res, 200, { 
+                    success: false, 
+                    message: `Connection test failed for ${provider}: ${serviceError.message}` 
+                });
+            }
+        } catch (error: any) {
+            console.error('[Daemon] AI config test error:', error);
+            return this.sendJson(res, 200, { 
+                success: false, 
+                message: `Configuration test failed: ${error.message}` 
+            });
+        }
+    }
+
     // Configuration endpoints
     if (path === '/api/config' && method === 'GET') {
         try {
@@ -888,17 +944,22 @@ export class DaemonServer {
             const request = JSON.parse(body);
             const configManager = getConfigManager();
             
+            // Support both formats:
+            // 1. Direct format: { ai: {...}, registry: {...} }
+            // 2. Nested format (from Web UI): { config: { ai: {...}, registry: {...} } }
+            const config = request.config || request;
+            
             // Update AI configuration
-            if (request.ai) {
-                if (request.ai.provider) await configManager.setAIProvider(request.ai.provider);
-                if (request.ai.apiKey) await configManager.setAIAPIKey(request.ai.apiKey);
-                if (request.ai.model) await configManager.setAIModel(request.ai.model);
+            if (config.ai) {
+                if (config.ai.provider) await configManager.setAIProvider(config.ai.provider);
+                if (config.ai.apiKey) await configManager.setAIAPIKey(config.ai.apiKey);
+                if (config.ai.model) await configManager.setAIModel(config.ai.model);
             }
             
             // Update registry configuration
-            if (request.registry) {
-                if (request.registry.default) await configManager.setRegistryDefault(request.registry.default);
-                if (request.registry.fallback) await configManager.setRegistryFallback(request.registry.fallback);
+            if (config.registry) {
+                if (config.registry.default) await configManager.setRegistryDefault(config.registry.default);
+                if (config.registry.fallback) await configManager.setRegistryFallback(config.registry.fallback);
             }
             
             const updatedConfig = await configManager.getAll();

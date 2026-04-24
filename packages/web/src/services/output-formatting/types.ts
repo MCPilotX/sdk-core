@@ -140,15 +140,6 @@ export interface FormatterRegistrationOptions {
 }
 
 /**
- * Data type detection result
- */
-export interface DataTypeDetection {
-  type: string;
-  confidence: number;
-  features: Record<string, any>;
-}
-
-/**
  * Common data types for intelligent formatting
  */
 export enum DataType {

@@ -202,24 +202,6 @@ export class OutputFormattingService {
   }
 
   /**
-   * Batch format multiple data items
-   */
-  batchFormat(
-    items: Array<{ data: any; context?: FormatContext }>,
-    parallel: boolean = true
-  ): FormattingResult[] {
-    if (parallel) {
-      return items.map(item => this.format(item.data, item.context));
-    } else {
-      const results: FormattingResult[] = [];
-      for (const item of items) {
-        results.push(this.format(item.data, item.context));
-      }
-      return results;
-    }
-  }
-
-  /**
    * Get formatter registry (for advanced usage)
    */
   getRegistry(): FormatterRegistry {
@@ -485,11 +467,5 @@ export class OutputFormattingService {
       OutputFormattingService.instance.initialize().catch(console.error);
     }
     return OutputFormattingService.instance;
-  }
-  
-  static async getInitializedInstance(): Promise<OutputFormattingService> {
-    const instance = OutputFormattingService.getInstance();
-    await instance.initialize();
-    return instance;
   }
 }

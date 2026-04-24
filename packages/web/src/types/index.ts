@@ -193,5 +193,34 @@ export interface ExecuteWorkflowRequest {
   parameters?: Record<string, any>;
 }
 
-// Notification related types
-export * from './notification';
+// Notification types
+export interface Notification {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error' | 'system';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  source: 'server' | 'process' | 'workflow' | 'system';
+  sourceId?: string;
+  actionUrl?: string;
+}
+
+export interface NotificationStats {
+  total: number;
+  unread: number;
+  byType: {
+    info: number;
+    success: number;
+    warning: number;
+    error: number;
+    system: number;
+  };
+  bySource: {
+    server: number;
+    process: number;
+    workflow: number;
+    system: number;
+  };
+}
+

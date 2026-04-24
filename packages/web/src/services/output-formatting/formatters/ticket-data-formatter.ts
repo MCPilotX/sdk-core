@@ -326,40 +326,6 @@ export class TicketDataFormatter extends BaseFormatter {
   }
 
   /**
-   * Parse seat information from text
-   */
-  private parseSeatInfo(seatText: string): Record<string, string> {
-    const seatInfo: Record<string, string> = {};
-    
-    if (!seatText || typeof seatText !== 'string') {
-      return seatInfo;
-    }
-    
-    // Split by common separators
-    const seatParts = seatText.split(/[,;]/).map(part => part.trim());
-    
-    for (const part of seatParts) {
-      // Match patterns like "Business Class: 14 tickets left 1083 yuan"
-      const match = part.match(/([^:]+):\s*(.+)/);
-      if (match) {
-        const seatType = match[1].trim();
-        const availability = match[2].trim();
-        seatInfo[seatType] = availability;
-      } else if (part.includes('left') || part.includes('available') || part.includes('sold out') || part.includes('no tickets')) {
-        // Handle simple availability patterns
-        const simpleMatch = part.match(/([^0-9]+)(.+)/);
-        if (simpleMatch) {
-          const seatType = simpleMatch[1].trim();
-          const availability = simpleMatch[2].trim();
-          seatInfo[seatType] = availability;
-        }
-      }
-    }
-    
-    return seatInfo;
-  }
-
-  /**
    * Format when no tickets found
    */
   private formatNoTicketsFound(data: any, context?: FormatContext): string {
@@ -432,26 +398,6 @@ export class TicketDataFormatter extends BaseFormatter {
     return groups;
   }
 
-  /**
-   * Format date header
-   */
-  private formatDateHeader(date: string, isChinese: boolean): string {
-    if (!isChinese || date === 'Unknown Date') return date;
-    
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return date;
-      
-      return d.toLocaleDateString('zh-CN', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-    } catch {
-      return date;
-    }
-  }
 /**
  * Extract date from ticket
  */

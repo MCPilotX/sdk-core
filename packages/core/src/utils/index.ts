@@ -8,6 +8,5 @@ export { ConfigManager, getConfigManager, getAIConfig, getRegistryConfig } from 
 export { getProcessesPath, getConfigPath, getLogsDir, getLogPath, getInTorchDir, ensureInTorchDir } from './paths';
 export { normalizeServerName, getDisplayName } from './server-name';
 export { isProcessRunning, isProcessRunningWithRetry, isWindows } from './system';
-export { ErrorHandler } from './error-handler';
 export { OwnerProjectFormat } from './owner-project-format';
 export { shouldUseDaemonMode, withDaemonFallback, withDaemonFallbackForProcesses } from './daemon-mode';

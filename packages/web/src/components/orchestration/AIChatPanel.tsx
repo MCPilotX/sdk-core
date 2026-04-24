@@ -21,7 +21,6 @@ interface AIChatPanelProps {
   messages: Message[];
   isAnalyzing: boolean;
   statusMessage?: string;
-  onInteractiveResponse?: (response: any) => void;
 }
 
 const AIChatPanel: React.FC<AIChatPanelProps> = ({ onSendMessage, messages, isAnalyzing, statusMessage }) => {

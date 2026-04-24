@@ -14,7 +14,7 @@
  */
 
 // ==================== Core Modules ====================
-export { ConfigManager } from './core';
+export { ConfigService, getConfigService } from './core';
 export type { RuntimeType, ServiceConfig, Config, AIConfig, DetectionResult } from './core';
 
 // ==================== AI Modules ====================

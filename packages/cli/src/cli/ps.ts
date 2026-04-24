@@ -2,6 +2,64 @@ import { Command } from 'commander';
 import { getProcessManager, DaemonClient, PROGRAM_NAME, getDisplayName } from '@intentorch/core';
 import Table from 'cli-table3';
 
+interface ProcessInfo {
+  pid: number;
+  serverName: string;
+  name: string;
+  version: string;
+  manifest: { name: string; version: string; runtime: { type: string; command: string; args: string[] } };
+  startTime: number;
+  status: string;
+  logPath: string;
+}
+
+function renderProcessTable(processes: ProcessInfo[], title: string, subtitle?: string): void {
+  if (processes.length === 0) {
+    console.log('No processes found');
+    return;
+  }
+
+  const table = new Table({
+    head: ['PID', 'Status', 'Server Name', 'Version', 'Started At'],
+    style: { head: ['cyan'], border: ['gray'] }
+  });
+
+  processes.forEach(p => {
+    const startTime = new Date(p.startTime).toLocaleTimeString();
+    let statusText = p.status.toUpperCase();
+
+    let displayName = 'Unknown';
+    try {
+      displayName = getDisplayName(p.serverName);
+    } catch (error) {
+      const err = error as Error;
+      console.warn(`Warning: Failed to get display name for server ${p.pid}: ${err.message}`);
+      displayName = p.name || `Server-${p.pid}`;
+    }
+
+    if (p.status === 'running') {
+      statusText = `✅ ${statusText}`;
+    } else if (p.status === 'stopped') {
+      statusText = `⏹️ ${statusText}`;
+    } else {
+      statusText = `❌ ${statusText}`;
+    }
+
+    table.push([
+      p.pid.toString(),
+      statusText,
+      displayName,
+      p.version || p.manifest.version,
+      startTime
+    ]);
+  });
+
+  console.log(`=== ${title} ===`);
+  if (subtitle) console.log(subtitle);
+  console.log(table.toString());
+  console.log(`Total: ${processes.length}\n`);
+}
+
 export function psCommand(): Command {
   const command = new Command('ps')
     .description('List all MCP Server processes')
@@ -23,49 +81,7 @@ export function psCommand(): Command {
             return;
           }
 
-          const table = new Table({
-            head: ['PID', 'Status', 'Server Name', 'Version', 'Started At'],
-            style: {
-              head: ['cyan'],
-              border: ['gray']
-            }
-          });
-
-          processes.forEach(p => {
-            const startTime = new Date(p.startTime).toLocaleTimeString();
-            let statusText = p.status.toUpperCase();
-            
-            // Safely get display name with error handling
-            let displayName = 'Unknown';
-            try {
-              displayName = getDisplayName(p.serverName);
-            } catch (error) {
-              const err = error as Error;
-              console.warn(`Warning: Failed to get display name for server ${p.pid}: ${err.message}`);
-              displayName = p.name || `Server-${p.pid}`;
-            }
-            
-            if (p.status === 'running') {
-              statusText = `✅ ${statusText}`;
-            } else if (p.status === 'stopped') {
-              statusText = `⏹️ ${statusText}`;
-            } else {
-              statusText = `❌ ${statusText}`;
-            }
-
-            table.push([
-              p.pid.toString(),
-              statusText,
-              displayName,
-              p.version || p.manifest.version,
-              startTime
-            ]);
-          });
-
-          console.log('=== MCP SERVER PROCESSES (LOCAL MODE) ===');
-          console.log('⚠️  Note: Showing local processes only (not managed by daemon)');
-          console.log(table.toString());
-          console.log(`Total: ${processes.length}\n`);
+          renderProcessTable(processes as ProcessInfo[], 'MCP SERVER PROCESSES (LOCAL MODE)', '⚠️  Note: Showing local processes only (not managed by daemon)');
           return;
         }
         
@@ -100,7 +116,7 @@ export function psCommand(): Command {
           }
           
           // Convert to ProcessInfo format with validation
-          const processes = servers.map(s => {
+          const processes: ProcessInfo[] = servers.map(s => {
             if (!s || typeof s !== 'object') {
               return {
                 pid: 0,
@@ -136,53 +152,7 @@ export function psCommand(): Command {
             };
           });
 
-          if (processes.length === 0) {
-            console.log('No processes found');
-            return;
-          }
-
-          const table = new Table({
-            head: ['PID', 'Status', 'Server Name', 'Version', 'Started At'],
-            style: {
-              head: ['cyan'],
-              border: ['gray']
-            }
-          });
-
-          processes.forEach(p => {
-            const startTime = new Date(p.startTime).toLocaleTimeString();
-            let statusText = p.status.toUpperCase();
-            
-            // Safely get display name with error handling
-            let displayName = 'Unknown';
-            try {
-              displayName = getDisplayName(p.serverName);
-            } catch (error) {
-              const err = error as Error;
-              console.warn(`Warning: Failed to get display name for server ${p.pid}: ${err.message}`);
-              displayName = p.name || `Server-${p.pid}`;
-            }
-            
-            if (p.status === 'running') {
-              statusText = `✅ ${statusText}`;
-            } else if (p.status === 'stopped') {
-              statusText = `⏹️ ${statusText}`;
-            } else {
-              statusText = `❌ ${statusText}`;
-            }
-
-            table.push([
-              p.pid.toString(),
-              statusText,
-              displayName,
-              p.version || p.manifest.version,
-              startTime
-            ]);
-          });
-
-          console.log('=== MCP SERVER PROCESSES (DAEMON MODE) ===');
-          console.log(table.toString());
-          console.log(`Total: ${processes.length}\n`);
+          renderProcessTable(processes, 'MCP SERVER PROCESSES (DAEMON MODE)');
         } catch (daemonError) {
           const error = daemonError as Error;
           console.error('❌ Daemon mode failed:', error.message);

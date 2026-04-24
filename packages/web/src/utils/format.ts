@@ -2,86 +2,62 @@
  * Format utility functions
  */
 
-// Format date time
-export function formatDateTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
-
-// Format relative time
-export function formatRelativeTime(date: Date | string): string {
-  try {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    
-    // Check if date is valid
-    if (!(d instanceof Date) || isNaN(d.getTime())) {
-      return 'Unknown time';
-    }
-    
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-
-    if (diffSec < 60) {
-      return 'just now';
-    } else if (diffMin < 60) {
-      return `${diffMin} minutes ago`;
-    } else if (diffHour < 24) {
-      return `${diffHour} hours ago`;
-    } else if (diffDay < 7) {
-      return `${diffDay} days ago`;
-    } else {
-      return formatDateTime(d);
-    }
-  } catch (error) {
-    console.error('Error formatting relative time:', error, date);
-    return 'Unknown time';
+/**
+ * Format a timestamp into a relative time string (e.g., "5 minutes ago", "2 hours ago")
+ */
+export function formatRelativeTime(timestamp: string | Date): string {
+  if (!timestamp) return '';
+  
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  
+  // Handle future dates
+  if (diffMs < 0) {
+    return 'just now';
   }
-}
-
-// Format file size
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-}
-
-// Format bytes (alias for formatFileSize)
-export function formatBytes(bytes: number): string {
-  return formatFileSize(bytes);
-}
-
-// Format duration
-export function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
+  
+  const seconds = Math.floor(diffMs / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    return `${hours} hours ${minutes % 60} minutes`;
-  } else if (minutes > 0) {
-    return `${minutes} minutes ${seconds % 60} seconds`;
+  const days = Math.floor(hours / 24);
+  
+  if (seconds < 60) {
+    return 'just now';
+  } else if (minutes < 60) {
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  } else if (hours < 24) {
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  } else if (days < 30) {
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
   } else {
-    return `${seconds} seconds`;
+    const months = Math.floor(days / 30);
+    return `${months} month${months !== 1 ? 's' : ''} ago`;
   }
 }
 
-// Truncate text
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+/**
+ * Format an MCP server name for display (e.g., "github-mcp-server" -> "GitHub MCP Server")
+ */
+export function formatMCPServerName(name: string): string {
+  if (!name) return '';
+  
+  // Handle special cases
+  if (name.toLowerCase() === 'github') return 'GitHub';
+  if (name.toLowerCase() === 'gitlab') return 'GitLab';
+  if (name.toLowerCase() === 'docker') return 'Docker';
+  
+  // Split by common separators and capitalize each word
+  return name
+    .split(/[-_\s.]+/)
+    .map(word => {
+      if (word.length === 0) return word;
+      // Handle acronyms (all uppercase)
+      if (word === word.toUpperCase() && word.length <= 4) return word;
+      // Capitalize first letter, lowercase rest
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
 }
 
 // Get status color
@@ -128,53 +104,8 @@ export function getStatusText(status: string): string {
   }
 }
 
-// Format command display
-export function formatCommand(command: string, args?: string[]): string {
-  if (!args || args.length === 0) return command;
-  return `${command} ${args.join(' ')}`;
-}
-
-// Safely display secret (show only part)
-export function maskSecret(secret?: string): string {
-  if (!secret) return 'Not set';
-  if (secret.length <= 8) return '***';
-  return `${secret.substring(0, 4)}***${secret.substring(secret.length - 4)}`;
-}
-
-// Generate random ID
-export function generateId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
-
-// Deep merge objects
-export function deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
-  const output = { ...target };
-  
-  if (isObject(target) && isObject(source)) {
-    Object.keys(source).forEach(key => {
-      const sourceKey = key as keyof T;
-      const sourceValue = source[sourceKey];
-      const targetValue = target[sourceKey];
-      
-      if (isObject(sourceValue)) {
-        if (!(key in target)) {
-          (output as any)[key] = sourceValue;
-        } else if (isObject(targetValue)) {
-          output[sourceKey] = deepMerge(targetValue, sourceValue as any);
-        } else {
-          (output as any)[key] = sourceValue;
-        }
-      } else {
-        (output as any)[key] = sourceValue;
-      }
-    });
-  }
-  
-  return output;
-}
-
 // Download file utility
-export function downloadFile(filename: string, content: string, type: string = 'text/plain'): void {
+function downloadFile(filename: string, content: string, type: string = 'text/plain'): void {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -225,114 +156,4 @@ export function exportLogsAsJSON(logs: any[], filename: string = 'logs.json'): v
 
   const jsonContent = JSON.stringify(logs, null, 2);
   downloadFile(filename, jsonContent, 'application/json');
-}
-
-/**
- * Format MCP server name to unified "owner/project" format
- * This function ensures consistent display of MCP server names across the application
- * 
- * @param serverName - The server name to format
- * @returns Formatted server name in "owner/project" format
- */
-export function formatMCPServerName(serverName: string): string {
-  if (!serverName || typeof serverName !== 'string') {
-    return serverName || '';
-  }
-
-  // Remove common prefixes and normalize
-  let normalized = serverName.trim();
-  
-  // Remove URL prefixes
-  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
-    // Extract the path part after the domain
-    try {
-      const url = new URL(normalized);
-      normalized = url.pathname;
-    } catch (e) {
-      // If URL parsing fails, keep as is
-    }
-  }
-  
-  // Remove file:// prefix
-  if (normalized.startsWith('file://')) {
-    normalized = normalized.substring(7);
-  }
-  
-  // Remove common registry prefixes
-  const prefixes = ['github:', 'gitee:', 'direct:'];
-  for (const prefix of prefixes) {
-    if (normalized.startsWith(prefix)) {
-      normalized = normalized.substring(prefix.length);
-      break;
-    }
-  }
-  
-  // Remove .json suffix
-  if (normalized.endsWith('.json')) {
-    normalized = normalized.substring(0, normalized.length - 5);
-  }
-  
-  // Remove /mcp.json suffix
-  if (normalized.endsWith('/mcp')) {
-    normalized = normalized.substring(0, normalized.length - 4);
-  }
-  
-  // Handle GitHub format: github/owner/repo or github/repo-name
-  if (normalized.startsWith('github/')) {
-    const parts = normalized.split('/');
-    if (parts.length >= 3) {
-      // github/owner/repo -> owner/repo
-      return `${parts[1]}/${parts[2]}`;
-    } else if (parts.length === 2) {
-      // github/repo-name -> github/repo-name (keep as is since no owner)
-      return normalized;
-    }
-  }
-  
-  // Handle Gitee format: owner/server from search results
-  // Already in owner/server format, just ensure it's clean
-  const parts = normalized.split('/');
-  if (parts.length >= 2) {
-    // Already has owner/project format
-    return `${parts[0]}/${parts[1]}`;
-  }
-  
-  // If we get here and it's a single name, check if it contains owner info
-  // Some names might be like "owner-repo" or similar
-  const dashIndex = normalized.indexOf('-');
-  if (dashIndex > 0) {
-    // Try to split by dash as owner-repo
-    return normalized.replace('-', '/');
-  }
-  
-  // Return as is if no transformation applied
-  return normalized;
-}
-
-/**
- * Extract owner from MCP server name
- * 
- * @param serverName - The server name
- * @returns Owner part or empty string
- */
-export function getMCPServerOwner(serverName: string): string {
-  const formatted = formatMCPServerName(serverName);
-  const parts = formatted.split('/');
-  return parts.length >= 1 ? parts[0] : '';
-}
-
-/**
- * Extract project from MCP server name
- * 
- * @param serverName - The server name
- * @returns Project part or empty string
- */
-export function getMCPServerProject(serverName: string): string {
-  const formatted = formatMCPServerName(serverName);
-  const parts = formatted.split('/');
-  return parts.length >= 2 ? parts[1] : '';
-}
-
-function isObject(item: any): boolean {
-  return item && typeof item === 'object' && !Array.isArray(item);
 }

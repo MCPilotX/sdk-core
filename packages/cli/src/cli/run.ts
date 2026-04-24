@@ -10,7 +10,6 @@
 
 import { Command } from 'commander';
 import { getExecuteService, getAIConfig, PROGRAM_NAME, printError } from '@intentorch/core';
-import fs from 'fs/promises';
 
 /**
  * Convert MCP response format to standard format

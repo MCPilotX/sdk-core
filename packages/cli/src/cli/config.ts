@@ -3,6 +3,16 @@ import { getConfigManager } from '@intentorch/core';
 import { AIProviders, RegistrySources } from '@intentorch/core';
 import type { AIProvider } from '@intentorch/core';
 
+function validateRegistrySource(value: string): boolean {
+  const validSources = Object.values(RegistrySources);
+  if (!validSources.includes(value as any)) {
+    console.error(`✗ Invalid registry source: ${value}`);
+    console.log(`Valid sources: ${validSources.join(', ')}`);
+    return false;
+  }
+  return true;
+}
+
 export function configCommand(): Command {
   const command = new Command('config')
     .description('Manage AI and Registry configuration')
@@ -35,24 +45,12 @@ export function configCommand(): Command {
           console.log(`✓ AI model set to: ${value}`);
           break;
         case 'registry.default':
-          // Validate registry source
-          const validSources = Object.values(RegistrySources);
-          if (!validSources.includes(value as any)) {
-            console.error(`✗ Invalid registry source: ${value}`);
-            console.log(`Valid sources: ${validSources.join(', ')}`);
-            process.exit(1);
-          }
+          if (!validateRegistrySource(value)) process.exit(1);
           await configManager.setRegistryDefault(value);
           console.log(`✓ Default registry set to: ${value}`);
           break;
         case 'registry.fallback':
-          // Validate registry source
-          const validFallbackSources = Object.values(RegistrySources);
-          if (!validFallbackSources.includes(value as any)) {
-            console.error(`✗ Invalid registry source: ${value}`);
-            console.log(`Valid sources: ${validFallbackSources.join(', ')}`);
-            process.exit(1);
-          }
+          if (!validateRegistrySource(value)) process.exit(1);
           await configManager.setRegistryFallback(value);
           console.log(`✓ Fallback registry set to: ${value}`);
           break;

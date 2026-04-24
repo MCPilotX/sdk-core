@@ -755,12 +755,26 @@ class ApiService {
       console.log('Backend API response:', response);
       return { success: true, message: response.message || 'Configuration test successful' };
     } catch (error: any) {
-      console.log('Backend AI test endpoint not available:', error.message);
-      console.log('Error details:', error.response?.status, error.response?.data);
+      console.log('Backend AI test endpoint error:', error);
       
-      // If backend endpoint is not available, return validation result
-      // Note: We cannot perform actual API test from browser due to CORS restrictions
-      // The validation has already been done above
+      // The response interceptor flattens errors, so error could be:
+      // 1. The response data object directly: { error: "Not Found", path: "/api/ai/test" }
+      // 2. An Error object with message
+      // 3. A string
+      
+      // Check if this is a 404 error (route not found)
+      const errorStr = typeof error === 'string' ? error : JSON.stringify(error);
+      const isNotFound = error?.error === 'Not Found' || errorStr.includes('Not Found') || errorStr.includes('404');
+      
+      if (isNotFound) {
+        console.warn('AI test endpoint not found on daemon (expected if daemon is outdated)');
+        return {
+          success: false,
+          message: `AI test endpoint (/api/ai/test) is not available on the daemon. Please update the daemon to the latest version. Configuration has been saved but cannot be tested.`
+        };
+      }
+      
+      // For other errors, return validation result
       return {
         success: true,
         message: `Configuration validated: ${config.provider} (${config.model})`

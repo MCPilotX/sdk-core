@@ -18,7 +18,6 @@ import { ParameterMapper, ValidationLevel } from '../mcp/parameter-mapper';
 import { intentorchDirectiveProcessor } from './intentorch-directive-processor';
 import { extractKeywords, calculateToolMatchScore } from '../utils/keyword-extractor';
 import { ToolScorer } from './tool-scorer';
-import { ExecutionFeedback } from './execution-feedback';
 import { DecompositionValidator } from './decomposition-validator';
 import { ToolExampleProvider } from './tool-example-provider';
 import { ToolRegistry } from '../mcp/tool-registry';

@@ -6,7 +6,6 @@
 // Export AI functionality
 export { AI, AIError, type AskResult, type ToolCall } from './ai';
 export { AIConfigManager } from './config';
-export { AICommand } from './ai-command';
 
 // Export AIConfig from core types
 export type { AIConfig } from '../core/types';

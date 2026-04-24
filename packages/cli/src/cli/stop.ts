@@ -1,6 +1,14 @@
 import { Command } from 'commander';
 import { getProcessManager, DaemonClient, PROGRAM_NAME } from '@intentorch/core';
 
+function handleDaemonError(daemonError: unknown): never {
+  console.error('❌ Daemon mode failed:', (daemonError as Error).message);
+  console.error('\n💡 Please start the daemon first:');
+  console.error(`   ${PROGRAM_NAME} daemon start`);
+  console.error('\nOr use --no-daemon flag to force local mode.');
+  process.exit(1);
+}
+
 export function stopCommand(): Command {
   const command = new Command('stop')
     .description('Stop a running MCP Server')
@@ -40,22 +48,14 @@ export function stopCommand(): Command {
         }
         
         // Try daemon mode
-        try {
-          const client = new DaemonClient();
-          const isDaemonRunning = await client.isDaemonRunning();
-          if (!isDaemonRunning) {
-            throw new Error('Daemon is not running');
-          }
-          
-          const response = await client.stopServer(pid);
-          console.log(`✓ ${response.message}${serverName ? ` (${serverName})` : ''}`);
-        } catch (daemonError) {
-          console.error('❌ Daemon mode failed:', (daemonError as Error).message);
-          console.error('\n💡 Please start the daemon first:');
-          console.error(`   ${PROGRAM_NAME} daemon start`);
-          console.error('\nOr use --no-daemon flag to force local mode.');
-          throw new Error(`Daemon is not running. Please run "${PROGRAM_NAME} daemon start" first.`);
+        const client = new DaemonClient();
+        const isDaemonRunning = await client.isDaemonRunning();
+        if (!isDaemonRunning) {
+          handleDaemonError(new Error('Daemon is not running'));
         }
+        
+        const response = await client.stopServer(pid);
+        console.log(`✓ ${response.message}${serverName ? ` (${serverName})` : ''}`);
       } catch (error) {
         console.error(`✗ Failed to stop "${target}":`, (error as Error).message);
         process.exit(1);
