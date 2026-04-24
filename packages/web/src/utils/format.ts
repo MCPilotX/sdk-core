@@ -5,10 +5,25 @@
 /**
  * Format a timestamp into a relative time string (e.g., "5 minutes ago", "2 hours ago")
  */
-export function formatRelativeTime(timestamp: string | Date): string {
-  if (!timestamp) return '';
+export function formatRelativeTime(timestamp: string | Date | number | undefined | null): string {
+  if (!timestamp && timestamp !== 0) return '';
   
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  let date: Date;
+  if (typeof timestamp === 'string') {
+    date = new Date(timestamp);
+  } else if (typeof timestamp === 'number') {
+    date = new Date(timestamp);
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    return '';
+  }
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+  
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   
